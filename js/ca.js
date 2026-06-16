@@ -9,6 +9,8 @@ async function checkMdp() {
   btn.disabled = false;
   btn.textContent = 'Accéder →';
 
+  console.log('RPC result:', ok, error);
+
   if (ok === true) {
     document.getElementById('mdp-section').style.display  = 'none';
     document.getElementById('name-section').style.display = 'block';
