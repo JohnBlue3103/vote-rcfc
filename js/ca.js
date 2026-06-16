@@ -1,8 +1,15 @@
-const MDP_CA = 'rcfc2026!1';
-
-function checkMdp() {
+async function checkMdp() {
   const val = document.getElementById('mdp-input').value;
-  if (val === MDP_CA) {
+  const btn = document.querySelector('#mdp-section .btn-confirm');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const { data: ok, error } = await sb.rpc('verify_mdp_ca', { mdp: val });
+
+  btn.disabled = false;
+  btn.textContent = 'Accéder →';
+
+  if (ok === true) {
     document.getElementById('mdp-section').style.display  = 'none';
     document.getElementById('name-section').style.display = 'block';
   } else {
