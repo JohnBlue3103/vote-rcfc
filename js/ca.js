@@ -1,27 +1,3 @@
-async function checkMdp() {
-  const val = document.getElementById('mdp-input').value;
-  const btn = document.querySelector('#mdp-section .btn-confirm');
-  btn.disabled = true;
-  btn.textContent = '...';
-
-  const { data: ok, error } = await sb.rpc('verify_mdp_ca', { mdp: val });
-
-  btn.disabled = false;
-  btn.textContent = 'Accéder →';
-
-  console.log('RPC result:', ok, error);
-
-  if (ok === true) {
-    document.getElementById('mdp-section').style.display  = 'none';
-    document.getElementById('name-section').style.display = 'block';
-  } else {
-    const err = document.getElementById('mdp-error');
-    err.style.display = 'block';
-    document.getElementById('mdp-input').value = '';
-    setTimeout(() => { err.style.display = 'none'; }, 2500);
-  }
-}
-
 const MEMBRES_CA = [
   'John Bernard',    'Aderito Miranda',    'Gireg Rannou',      'Didier Mercadal',
   'Romain Hochedez', 'Alexandre Ruiz',     'Karim Hajjaji',     'Emmanuel Martinez',
@@ -30,31 +6,58 @@ const MEMBRES_CA = [
 ];
 
 let selectedName = null;
-let mesVotes     = {};   // resolution_id -> choix
-let pendingVote  = {};   // resolution_id -> choix en attente
-let nomsUtilises = [];   // noms ayant déjà voté (pour au moins 1 résolution)
+let mesVotes     = {};
+let pendingVote  = {};
+let nomsUtilises = [];
+
+// ── Mot de passe ──────────────────────────────────────────────────────────────
+
+async function checkMdp() {
+  const input = document.getElementById('mdp-input');
+  const btn   = document.getElementById('btn-mdp');
+  const err   = document.getElementById('mdp-error');
+  const val   = input.value;
+
+  btn.disabled    = true;
+  btn.textContent = '...';
+
+  const { data: ok, error } = await sb.rpc('verify_mdp_ca', { mdp: val });
+
+  btn.disabled    = false;
+  btn.textContent = 'Accéder →';
+
+  if (error) {
+    console.error('RPC error:', error);
+    showToast('Erreur serveur : ' + error.message);
+    return;
+  }
+
+  if (ok === true) {
+    document.getElementById('mdp-section').style.display  = 'none';
+    document.getElementById('name-section').style.display = 'block';
+  } else {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+    setTimeout(() => { err.style.display = 'none'; }, 2500);
+  }
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadNomsUtilises();
   renderNameGrid();
-  document.getElementById('mdp-input')?.focus();
+  document.getElementById('mdp-input').focus();
 });
 
 async function loadNomsUtilises() {
-  // Récupère tous les votants distincts sur la session CA active
   const session = await getActiveSession('CA');
   if (!session) return;
-
-  const { data: resolutions } = await sb
-    .from('resolutions').select('id').eq('session_id', session.id);
+  const { data: resolutions } = await sb.from('resolutions').select('id').eq('session_id', session.id);
   if (!resolutions?.length) return;
-
   const resIds = resolutions.map(r => r.id);
-  const { data: votes } = await sb
-    .from('votes').select('votant_email').in('resolution_id', resIds);
-
+  const { data: votes } = await sb.from('votes').select('votant_email').in('resolution_id', resIds);
   nomsUtilises = [...new Set((votes || []).map(v => v.votant_email))];
 }
 
@@ -63,19 +66,18 @@ async function loadNomsUtilises() {
 function renderNameGrid() {
   const grid = document.getElementById('name-grid');
   grid.innerHTML = MEMBRES_CA.map(nom => {
-    const used = nomsUtilises.includes(nom);
-    return `<button
-      class="name-btn ${used ? 'used' : ''}"
-      onclick="${used ? '' : `selectName('${nom}')`}"
-      ${used ? 'disabled title="A déjà voté"' : ''}
-    >${nom}${used ? ' ✓' : ''}</button>`;
+    const used    = nomsUtilises.includes(nom);
+    const safeNom = nom.replace(/'/g, "\\'");
+    return '<button class="name-btn ' + (used ? 'used' : '') + '" '
+      + (used ? 'disabled' : 'onclick="selectName(this, \'' + safeNom + '\')"')
+      + '>' + nom + (used ? ' ✓' : '') + '</button>';
   }).join('');
 }
 
-function selectName(nom) {
+function selectName(el, nom) {
   selectedName = nom;
   document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  el.classList.add('active');
   document.getElementById('btn-confirm-name').disabled = false;
 }
 
@@ -89,11 +91,11 @@ async function confirmName() {
 
 function changeName() {
   selectedName = null;
-  mesVotes = {};
+  mesVotes    = {};
   pendingVote = {};
   document.getElementById('vote-section').style.display = 'none';
   document.getElementById('name-section').style.display = 'block';
-  document.getElementById('btn-confirm-name').disabled = true;
+  document.getElementById('btn-confirm-name').disabled  = true;
   document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
 }
 
@@ -101,42 +103,32 @@ function changeName() {
 
 async function getActiveSession(type) {
   const { data } = await sb
-    .from('sessions')
-    .select('*')
-    .eq('type', type)
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .from('sessions').select('*').eq('type', type)
+    .order('created_at', { ascending: false }).limit(1);
   return data?.[0] || null;
 }
 
 async function loadResolutions() {
   const session = await getActiveSession('CA');
-
   if (!session) {
     document.getElementById('res-list').innerHTML =
-      '<div class="empty-state"><h3>Aucune session active</h3><p>Contactez l\'administrateur.</p></div>';
+      '<div class="empty-state"><h3>Aucune session active</h3><p>L\'administrateur doit créer une session CA.</p></div>';
     return;
   }
 
   const { data: resolutions } = await sb
-    .from('resolutions')
-    .select('*')
-    .eq('session_id', session.id)
-    .order('numero');
+    .from('resolutions').select('*').eq('session_id', session.id).order('numero');
 
   if (!resolutions?.length) {
     document.getElementById('res-list').innerHTML =
-      '<div class="empty-state"><h3>Aucune résolution</h3><p>Les résolutions apparaîtront ici.</p></div>';
+      '<div class="empty-state"><h3>Aucune résolution</h3><p>L\'administrateur n\'a pas encore ajouté de résolutions.</p></div>';
     return;
   }
 
-  // Mes votes déjà enregistrés
   const resIds = resolutions.map(r => r.id);
   const { data: votes } = await sb
-    .from('votes')
-    .select('resolution_id, choix')
-    .in('resolution_id', resIds)
-    .eq('votant_email', selectedName);
+    .from('votes').select('resolution_id, choix')
+    .in('resolution_id', resIds).eq('votant_email', selectedName);
 
   mesVotes = {};
   (votes || []).forEach(v => { mesVotes[v.resolution_id] = v.choix; });
@@ -147,41 +139,38 @@ async function loadResolutions() {
 // ── Render ────────────────────────────────────────────────────────────────────
 
 function renderResolutions(resolutions) {
-  document.getElementById('res-list').innerHTML =
-    resolutions.map(r => renderCard(r)).join('');
+  document.getElementById('res-list').innerHTML = resolutions.map(renderCard).join('');
 }
 
 function renderCard(r) {
   const dejaVote = mesVotes[r.id];
   const isOpen   = r.statut === 'ouverte';
+  const labels   = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
 
   let body = '';
   if (dejaVote) {
-    const labels = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
-    body = `<span class="voted-tag ${dejaVote}">${labels[dejaVote]}</span>
-            <p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>`;
+    body = '<span class="voted-tag ' + dejaVote + '">' + labels[dejaVote] + '</span>'
+         + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>';
   } else if (isOpen) {
-    body = `
-      <div class="vote-row">
-        <button class="vbtn pour"        onclick="selectVote('${r.id}','pour',this)">✅ Pour</button>
-        <button class="vbtn contre"      onclick="selectVote('${r.id}','contre',this)">❌ Contre</button>
-        <button class="vbtn abstention"  onclick="selectVote('${r.id}','abstention',this)">⚪ Abstention</button>
-      </div>
-      <div class="confirm-row" id="confirm-${r.id}">
-        <button class="btn-ok"     onclick="confirmVote('${r.id}')">Confirmer</button>
-        <button class="btn-cancel" onclick="cancelVote('${r.id}')">Annuler</button>
-      </div>`;
+    body = '<div class="vote-row">'
+      + '<button class="vbtn pour"       onclick="selectVote(\'' + r.id + '\',\'pour\',this)">✅ Pour</button>'
+      + '<button class="vbtn contre"     onclick="selectVote(\'' + r.id + '\',\'contre\',this)">❌ Contre</button>'
+      + '<button class="vbtn abstention" onclick="selectVote(\'' + r.id + '\',\'abstention\',this)">⚪ Abstention</button>'
+      + '</div>'
+      + '<div class="confirm-row" id="confirm-' + r.id + '">'
+      + '<button class="btn-ok"     onclick="confirmVote(\'' + r.id + '\')">Confirmer</button>'
+      + '<button class="btn-cancel" onclick="cancelVote(\'' + r.id + '\')">Annuler</button>'
+      + '</div>';
   } else {
-    body = `<span class="closed-label">Vote fermé pour cette résolution</span>`;
+    body = '<span class="closed-label">Vote fermé pour cette résolution</span>';
   }
 
-  return `
-  <div class="res-card ${dejaVote ? 'voted' : ''}" id="card-${r.id}">
-    <div class="res-num">Résolution n°${r.numero}</div>
-    <div class="res-titre">${r.titre}</div>
-    ${r.description ? `<div class="res-desc">${r.description}</div>` : ''}
-    ${body}
-  </div>`;
+  return '<div class="res-card ' + (dejaVote ? 'voted' : '') + '" id="card-' + r.id + '">'
+    + '<div class="res-num">Résolution n°' + r.numero + '</div>'
+    + '<div class="res-titre">' + r.titre + '</div>'
+    + (r.description ? '<div class="res-desc">' + r.description + '</div>' : '')
+    + body
+    + '</div>';
 }
 
 // ── Vote ──────────────────────────────────────────────────────────────────────
@@ -191,14 +180,14 @@ function selectVote(resId, choix, btn) {
   const card = document.getElementById('card-' + resId);
   card.querySelectorAll('.vbtn').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
-  document.getElementById('confirm-' + resId)?.classList.add('show');
+  document.getElementById('confirm-' + resId).classList.add('show');
 }
 
 function cancelVote(resId) {
   delete pendingVote[resId];
   const card = document.getElementById('card-' + resId);
   card.querySelectorAll('.vbtn').forEach(b => b.classList.remove('sel'));
-  document.getElementById('confirm-' + resId)?.classList.remove('show');
+  document.getElementById('confirm-' + resId).classList.remove('show');
 }
 
 async function confirmVote(resId) {
@@ -220,20 +209,14 @@ async function confirmVote(resId) {
   delete pendingVote[resId];
   showToast('Vote enregistré ✅');
 
-  // Re-render la carte uniquement
-  const card = document.getElementById('card-' + resId);
   const labels = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
+  const card   = document.getElementById('card-' + resId);
   card.classList.add('voted');
   card.querySelector('.vote-row')?.remove();
   card.querySelector('.confirm-row')?.remove();
-  const tag = document.createElement('span');
-  tag.className = `voted-tag ${choix}`;
-  tag.textContent = labels[choix];
-  card.appendChild(tag);
-  const note = document.createElement('p');
-  note.style = 'font-size:0.78rem;color:#4a5568;margin-top:8px;';
-  note.textContent = 'Vote enregistré';
-  card.appendChild(note);
+  card.insertAdjacentHTML('beforeend',
+    '<span class="voted-tag ' + choix + '">' + labels[choix] + '</span>'
+    + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>');
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
