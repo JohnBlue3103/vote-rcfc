@@ -328,24 +328,21 @@ async function loadChronologie() {
             else        pill = '<span class="result-pill result-rejete">Rejeté ' + c.pour + '/' + exprimes + ' (2/3)</span>';
           }
 
-          // Votants par choix pour cette résolution
+          // Votants de cette résolution (sans révéler leur choix)
           const votesDeLaRes = (votes || []).filter(v => v.resolution_id === r.id);
-          const parChoix = { pour: [], contre: [], abstention: [] };
-          votesDeLaRes.forEach(v => { if (parChoix[v.choix]) parChoix[v.choix].push(v.votant_email); });
+          const votantsDeLaRes = votesDeLaRes.map(v => v.votant_email).sort();
 
-          const voterRow = (label, color, noms) => noms.length === 0 ? '' :
-            '<div style="margin-top:6px;font-size:0.75rem;">'
-            + '<span style="color:' + color + ';font-weight:700;">' + label + ' : </span>'
-            + noms.map(n => '<span style="background:#1a3260;border-radius:999px;padding:2px 8px;color:#cbd5e0;margin-right:4px;">' + n + '</span>').join('')
+          const votantsRow = votantsDeLaRes.length === 0 ? '' :
+            '<div style="margin-top:8px;font-size:0.75rem;">'
+            + '<span style="color:#8fa8c8;font-weight:700;">Membres votants : </span>'
+            + votantsDeLaRes.map(n => '<span style="background:#1a3260;border-radius:999px;padding:2px 8px;color:#cbd5e0;margin-right:4px;">' + n + '</span>').join('')
             + '</div>';
 
           return '<div class="chrono-item" style="flex-direction:column;align-items:flex-start;gap:4px;">'
             + '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">'
             + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + '</span>'
             + pill + '</div>'
-            + voterRow('✅ Pour',       '#48bb78', parChoix.pour)
-            + voterRow('❌ Contre',     '#fc8181', parChoix.contre)
-            + voterRow('⚪ Abstention', '#f6e05e', parChoix.abstention)
+            + votantsRow
             + '</div>';
         }).join('')
       + '</div></div>';
