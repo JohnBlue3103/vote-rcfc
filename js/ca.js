@@ -2,7 +2,7 @@ const MEMBRES_CA = [
   'John Bernard',    'Aderito Miranda',    'Gireg Rannou',      'Didier Mercadal',
   'Romain Hochedez', 'Alexandre Ruiz',     'Karim Hajjaji',     'Emmanuel Martinez',
   'Laurent Laborde', 'Tiffany Duclos',     'Laurent Cohen',     'Nicolas Broueilh',
-  'Joël Chiche',     'Brice Mamode',       'Yohan Ayrinhac',    'Samir Benhaicha',
+  'Joël Chich',      'Brice Mamode',       'Yohan Ayrinhac',    'Samir Benhaicha',
 ];
 
 let selectedName = null;
