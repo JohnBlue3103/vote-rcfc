@@ -28,6 +28,7 @@ async function checkMdp() {
   if (error) { showToast('Erreur serveur : ' + error.message); return; }
 
   if (ok === true) {
+    sessionStorage.setItem('ca_auth', '1');
     document.getElementById('mdp-section').style.display    = 'none';
     document.getElementById('choice-section').style.display = 'block';
     await loadNomsUtilises();
@@ -40,8 +41,15 @@ async function checkMdp() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('mdp-input').focus();
+window.addEventListener('DOMContentLoaded', async () => {
+  if (sessionStorage.getItem('ca_auth') === '1') {
+    document.getElementById('mdp-section').style.display    = 'none';
+    document.getElementById('choice-section').style.display = 'block';
+    await loadNomsUtilises();
+    renderNameGrid();
+  } else {
+    document.getElementById('mdp-input').focus();
+  }
 });
 
 // ── Navigation principale ─────────────────────────────────────────────────────

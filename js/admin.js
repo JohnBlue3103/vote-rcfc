@@ -19,6 +19,7 @@ async function checkMdpAdmin() {
   if (error) { showToast('Erreur : ' + error.message); return; }
 
   if (ok === true) {
+    sessionStorage.setItem('admin_auth', '1');
     document.getElementById('mdp-section').style.display  = 'none';
     document.getElementById('admin-panel').style.display  = 'block';
     await loadSessions();
@@ -30,10 +31,16 @@ async function checkMdpAdmin() {
   }
 }
 
-function logoutAdmin() { location.reload(); }
+function logoutAdmin() { sessionStorage.removeItem('admin_auth'); location.reload(); }
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('mdp-input').focus();
+window.addEventListener('DOMContentLoaded', async () => {
+  if (sessionStorage.getItem('admin_auth') === '1') {
+    document.getElementById('mdp-section').style.display  = 'none';
+    document.getElementById('admin-panel').style.display  = 'block';
+    await loadSessions();
+  } else {
+    document.getElementById('mdp-input').focus();
+  }
 });
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
