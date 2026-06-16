@@ -1,70 +1,63 @@
-let adminUser = null;
-let sessions  = [];
-let currentViewSession = null;
+let sessions = [];
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Mot de passe ──────────────────────────────────────────────────────────────
 
-async function adminLogin() {
-  const email = document.getElementById('admin-email').value.trim();
-  if (!email) return showToast('Email requis');
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  });
-  if (error) return showToast('Erreur : ' + error.message);
-  document.getElementById('admin-auth-msg').textContent = '✅ Lien envoyé ! Vérifiez votre mail.';
+async function checkMdpAdmin() {
+  const input = document.getElementById('mdp-input');
+  const btn   = document.getElementById('btn-mdp');
+  const err   = document.getElementById('mdp-error');
+  const val   = input.value;
+
+  btn.disabled    = true;
+  btn.textContent = '...';
+
+  const { data: ok, error } = await sb.rpc('verify_mdp_admin', { mdp: val });
+
+  btn.disabled    = false;
+  btn.textContent = 'Accéder →';
+
+  if (error) { showToast('Erreur : ' + error.message); return; }
+
+  if (ok === true) {
+    document.getElementById('mdp-section').style.display  = 'none';
+    document.getElementById('admin-panel').style.display  = 'block';
+    await loadSessions();
+  } else {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+    setTimeout(() => { err.style.display = 'none'; }, 2500);
+  }
 }
 
-async function logout() {
-  await sb.auth.signOut();
-  location.reload();
-}
+function logoutAdmin() { location.reload(); }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (session?.user) initAdmin(session.user);
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('mdp-input').focus();
 });
 
-sb.auth.getSession().then(({ data: { session } }) => {
-  if (session?.user) initAdmin(session.user);
-});
-
-async function initAdmin(user) {
-  adminUser = user;
-  document.getElementById('admin-auth').style.display  = 'none';
-  document.getElementById('admin-panel').style.display = 'block';
-  document.getElementById('admin-user-email').textContent = user.email;
-  await loadSessions();
-}
+// ── Sessions ──────────────────────────────────────────────────────────────────
 
 async function loadSessions() {
   const { data } = await sb.from('sessions').select('*').order('created_at', { ascending: false });
   sessions = data || [];
-  populateSessionSelects();
-  if (sessions.length) loadAdminResolutions();
+  populateSelects();
+  if (sessions.length) loadAdminRes();
 }
 
-function populateSessionSelects() {
+function populateSelects() {
   const opts = sessions.map(s =>
-    `<option value="${s.id}">[${s.type}] ${s.titre} — ${s.statut}</option>`
+    '<option value="' + s.id + '">[' + s.type + '] ' + s.titre + ' — ' + s.statut + '</option>'
   ).join('');
-  document.getElementById('r-session').innerHTML   = opts || '<option>— aucune session —</option>';
-  document.getElementById('view-session').innerHTML = opts || '<option>— aucune session —</option>';
+  const empty = '<option>— aucune session —</option>';
+  document.getElementById('r-session').innerHTML    = opts || empty;
+  document.getElementById('view-session').innerHTML = opts || empty;
 }
-
-async function refreshAdmin() {
-  await loadSessions();
-  showToast('Actualisé');
-}
-
-// ── Sessions ──────────────────────────────────────────────────────────────────
 
 async function createSession() {
   const titre = document.getElementById('s-titre').value.trim();
   const type  = document.getElementById('s-type').value;
   if (!titre) return showToast('Titre requis');
-
   const { error } = await sb.from('sessions').insert({ titre, type });
   if (error) return showToast('Erreur : ' + error.message);
   showToast('Session créée ✅');
@@ -73,12 +66,16 @@ async function createSession() {
 }
 
 async function toggleSession(statut) {
-  const sessionId = document.getElementById('view-session').value;
-  if (!sessionId) return;
-  const { error } = await sb.from('sessions').update({ statut }).eq('id', sessionId);
-  if (error) return showToast('Erreur : ' + error.message);
-  showToast(statut === 'ouverte' ? 'Session ouverte ✅' : 'Session fermée ✅');
+  const id = document.getElementById('view-session').value;
+  if (!id) return;
+  await sb.from('sessions').update({ statut }).eq('id', id);
+  showToast(statut === 'ouverte' ? 'Session ouverte ✅' : 'Session fermée');
   await loadSessions();
+}
+
+async function refreshAdmin() {
+  await loadSessions();
+  showToast('Actualisé');
 }
 
 // ── Résolutions ───────────────────────────────────────────────────────────────
@@ -88,109 +85,102 @@ async function createResolution() {
   const numero      = parseInt(document.getElementById('r-numero').value);
   const titre       = document.getElementById('r-titre').value.trim();
   const description = document.getElementById('r-desc').value.trim();
-
   if (!session_id || !titre) return showToast('Session et titre requis');
-
   const { error } = await sb.from('resolutions').insert({ session_id, numero, titre, description });
   if (error) return showToast('Erreur : ' + error.message);
   showToast('Résolution ajoutée ✅');
-  document.getElementById('r-titre').value = '';
-  document.getElementById('r-desc').value  = '';
+  document.getElementById('r-titre').value  = '';
+  document.getElementById('r-desc').value   = '';
   document.getElementById('r-numero').value = numero + 1;
-  await loadAdminResolutions();
+  await loadAdminRes();
 }
 
-async function loadAdminResolutions() {
+async function loadAdminRes() {
   const sessionId = document.getElementById('view-session').value;
   if (!sessionId) return;
 
-  currentViewSession = sessions.find(s => s.id === sessionId);
+  const session = sessions.find(s => s.id === sessionId);
 
   // Boutons ouvrir/fermer session
-  const ctrl = document.getElementById('admin-session-controls');
-  ctrl.style.display = 'flex';
-  document.getElementById('btn-open-session').style.display =
-    currentViewSession?.statut === 'fermee' ? 'inline-block' : 'none';
-  document.getElementById('btn-close-session').style.display =
-    currentViewSession?.statut === 'ouverte' ? 'inline-block' : 'none';
+  const tog = document.getElementById('session-toggle');
+  tog.style.display = 'flex';
+  tog.innerHTML = session?.statut === 'fermee'
+    ? '<button class="btn-sm-green" onclick="toggleSession(\'ouverte\')">▶ Ouvrir la session</button>'
+    : '<button class="btn-sm-red"   onclick="toggleSession(\'fermee\')">■ Fermer la session</button>';
 
   const { data: resolutions } = await sb
-    .from('resolutions')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('numero');
+    .from('resolutions').select('*').eq('session_id', sessionId).order('numero');
 
   if (!resolutions?.length) {
     document.getElementById('admin-res-list').innerHTML =
-      '<div class="empty-state"><p>Aucune résolution</p></div>';
+      '<div class="empty-state"><p>Aucune résolution pour cette session</p></div>';
     return;
   }
 
-  // Compte les votes pour chaque résolution
+  // Votes par résolution
   const resIds = resolutions.map(r => r.id);
-  const { data: votes } = await sb
-    .from('votes')
-    .select('resolution_id, choix')
-    .in('resolution_id', resIds);
+  const { data: votes } = await sb.from('votes').select('resolution_id, choix').in('resolution_id', resIds);
 
-  const voteCounts = {};
-  resIds.forEach(id => { voteCounts[id] = { pour: 0, contre: 0, abstention: 0, total: 0 }; });
+  const counts = {};
+  resIds.forEach(id => { counts[id] = { pour: 0, contre: 0, abstention: 0, total: 0 }; });
   (votes || []).forEach(v => {
-    if (voteCounts[v.resolution_id]) {
-      voteCounts[v.resolution_id][v.choix]++;
-      voteCounts[v.resolution_id].total++;
+    if (counts[v.resolution_id]) {
+      counts[v.resolution_id][v.choix]++;
+      counts[v.resolution_id].total++;
     }
   });
 
   document.getElementById('admin-res-list').innerHTML =
-    resolutions.map(r => renderAdminCard(r, voteCounts[r.id])).join('');
+    resolutions.map(r => renderAdminCard(r, counts[r.id])).join('');
 }
 
-function renderAdminCard(r, counts) {
-  const total = counts.total || 0;
-  const pct = v => total ? Math.round((v / total) * 100) : 0;
+function renderAdminCard(r, c) {
+  const total = c.total || 0;
+  const pct   = v => total ? Math.round((v / total) * 100) : 0;
 
-  const barRow = (label, count, color) => `
-    <div class="bar-row">
-      <span class="bar-label">${label}</span>
-      <div style="flex:1;background:#f0f4f8;border-radius:4px;height:8px;">
-        <div class="bar-fill" style="width:${pct(count)}%;background:${color};"></div>
-      </div>
-      <span class="bar-count">${count}</span>
-    </div>`;
+  function barRow(label, val, color) {
+    return '<div class="bar-row">'
+      + '<span class="bar-label">' + label + '</span>'
+      + '<div class="bar-track"><div class="bar-fill" style="width:' + pct(val) + '%;background:' + color + ';"></div></div>'
+      + '<span class="bar-count">' + val + '</span>'
+      + '</div>';
+  }
 
-  return `
-  <div class="res-admin-card ${r.statut === 'ouverte' ? 'open' : ''}">
-    <div style="flex:1;">
-      <div style="font-size:0.78rem;color:#888;">Résolution n°${r.numero}</div>
-      <div style="font-weight:700;margin:3px 0;">${r.titre}</div>
-      <div class="results-bar" style="margin-top:10px;">
-        ${barRow('✅ Pour',       counts.pour,       '#276749')}
-        ${barRow('❌ Contre',     counts.contre,     '#e53e3e')}
-        ${barRow('⚪ Abstention', counts.abstention, '#d69e2e')}
-      </div>
-      <div style="font-size:0.78rem;color:#888;margin-top:6px;">${total} vote${total>1?'s':''}</div>
-    </div>
-    <div class="res-actions">
-      <span class="badge ${r.statut === 'ouverte' ? 'badge-open' : 'badge-closed'}">${r.statut}</span>
-      ${r.statut === 'fermee'
-        ? `<button class="btn btn-success btn-sm" onclick="toggleRes('${r.id}','ouverte')">Ouvrir</button>`
-        : `<button class="btn btn-danger btn-sm"  onclick="toggleRes('${r.id}','fermee')">Fermer</button>`}
-      <button class="btn btn-outline btn-sm" style="color:#e53e3e;border-color:#e53e3e;" onclick="deleteRes('${r.id}')">Suppr.</button>
-    </div>
-  </div>`;
+  const badge = r.statut === 'ouverte'
+    ? '<span class="badge-open">Ouvert</span>'
+    : '<span class="badge-closed">Fermé</span>';
+
+  const toggleBtn = r.statut === 'fermee'
+    ? '<button class="btn-sm-green" onclick="toggleRes(\'' + r.id + '\',\'ouverte\')">Ouvrir</button>'
+    : '<button class="btn-sm-red"   onclick="toggleRes(\'' + r.id + '\',\'fermee\')">Fermer</button>';
+
+  return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '">'
+    + '<div class="res-admin-top">'
+    +   '<div>'
+    +     '<div class="res-admin-num">Résolution n°' + r.numero + ' ' + badge + '</div>'
+    +     '<div class="res-admin-titre">' + r.titre + '</div>'
+    +   '</div>'
+    +   '<div class="res-actions">' + toggleBtn
+    +     '<button class="btn-sm-grey" onclick="deleteRes(\'' + r.id + '\')">🗑</button>'
+    +   '</div>'
+    + '</div>'
+    + barRow('✅ Pour',       c.pour,       '#48bb78')
+    + barRow('❌ Contre',     c.contre,     '#fc8181')
+    + barRow('⚪ Abstention', c.abstention, '#f6e05e')
+    + '<div class="vote-total">' + total + ' vote' + (total > 1 ? 's' : '') + ' enregistré' + (total > 1 ? 's' : '') + '</div>'
+    + '</div>';
 }
 
 async function toggleRes(resId, statut) {
   await sb.from('resolutions').update({ statut }).eq('id', resId);
-  await loadAdminResolutions();
+  await loadAdminRes();
 }
 
 async function deleteRes(resId) {
   if (!confirm('Supprimer cette résolution et tous ses votes ?')) return;
   await sb.from('resolutions').delete().eq('id', resId);
-  showToast('Résolution supprimée');
-  await loadAdminResolutions();
+  showToast('Supprimé');
+  await loadAdminRes();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
