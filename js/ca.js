@@ -16,25 +16,22 @@ async function checkMdp() {
   const input = document.getElementById('mdp-input');
   const btn   = document.getElementById('btn-mdp');
   const err   = document.getElementById('mdp-error');
-  const val   = input.value;
 
-  btn.disabled    = true;
+  btn.disabled = true;
   btn.textContent = '...';
 
-  const { data: ok, error } = await sb.rpc('verify_mdp_ca', { mdp: val });
+  const { data: ok, error } = await sb.rpc('verify_mdp_ca', { mdp: input.value });
 
-  btn.disabled    = false;
+  btn.disabled = false;
   btn.textContent = 'Accéder →';
 
-  if (error) {
-    console.error('RPC error:', error);
-    showToast('Erreur serveur : ' + error.message);
-    return;
-  }
+  if (error) { showToast('Erreur serveur : ' + error.message); return; }
 
   if (ok === true) {
-    document.getElementById('mdp-section').style.display  = 'none';
-    document.getElementById('name-section').style.display = 'block';
+    document.getElementById('mdp-section').style.display    = 'none';
+    document.getElementById('choice-section').style.display = 'block';
+    await loadNomsUtilises();
+    renderNameGrid();
   } else {
     err.style.display = 'block';
     input.value = '';
@@ -43,25 +40,50 @@ async function checkMdp() {
   }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadNomsUtilises();
-  renderNameGrid();
+window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('mdp-input').focus();
 });
+
+// ── Navigation principale ─────────────────────────────────────────────────────
+
+function goVoter() {
+  hide('choice-section');
+  show('name-section');
+}
+
+function goDocs() {
+  hide('choice-section');
+  show('docs-section');
+  loadDocs();
+}
+
+function backToChoice() {
+  hide('vote-section');
+  hide('name-section');
+  hide('docs-section');
+  show('choice-section');
+  selectedName = null;
+  mesVotes = {};
+  pendingVote = {};
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-confirm-name').disabled = true;
+}
+
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── Noms utilisés ─────────────────────────────────────────────────────────────
 
 async function loadNomsUtilises() {
   const session = await getActiveSession('CA');
   if (!session) return;
-  const { data: resolutions } = await sb.from('resolutions').select('id').eq('session_id', session.id);
-  if (!resolutions?.length) return;
-  const resIds = resolutions.map(r => r.id);
-  const { data: votes } = await sb.from('votes').select('votant_email').in('resolution_id', resIds);
+  const { data: res } = await sb.from('resolutions').select('id').eq('session_id', session.id);
+  if (!res?.length) return;
+  const { data: votes } = await sb.from('votes').select('votant_email').in('resolution_id', res.map(r => r.id));
   nomsUtilises = [...new Set((votes || []).map(v => v.votant_email))];
 }
 
-// ── Sélection du nom ──────────────────────────────────────────────────────────
+// ── Sélection nom ─────────────────────────────────────────────────────────────
 
 function renderNameGrid() {
   const grid = document.getElementById('name-grid');
@@ -83,23 +105,13 @@ function selectName(el, nom) {
 
 async function confirmName() {
   if (!selectedName) return;
-  document.getElementById('name-section').style.display = 'none';
-  document.getElementById('vote-section').style.display = 'block';
+  hide('name-section');
+  show('vote-section');
   document.getElementById('voter-name-display').textContent = selectedName;
   await loadResolutions();
 }
 
-function changeName() {
-  selectedName = null;
-  mesVotes    = {};
-  pendingVote = {};
-  document.getElementById('vote-section').style.display = 'none';
-  document.getElementById('name-section').style.display = 'block';
-  document.getElementById('btn-confirm-name').disabled  = true;
-  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
-}
-
-// ── Sessions & Résolutions ────────────────────────────────────────────────────
+// ── Sessions ──────────────────────────────────────────────────────────────────
 
 async function getActiveSession(type) {
   const { data } = await sb
@@ -107,6 +119,8 @@ async function getActiveSession(type) {
     .order('created_at', { ascending: false }).limit(1);
   return data?.[0] || null;
 }
+
+// ── Vote ──────────────────────────────────────────────────────────────────────
 
 async function loadResolutions() {
   const session = await getActiveSession('CA');
@@ -121,7 +135,7 @@ async function loadResolutions() {
 
   if (!resolutions?.length) {
     document.getElementById('res-list').innerHTML =
-      '<div class="empty-state"><h3>Aucune résolution</h3><p>L\'administrateur n\'a pas encore ajouté de résolutions.</p></div>';
+      '<div class="empty-state"><h3>Aucune résolution</h3><p>Aucune résolution n\'a encore été ajoutée.</p></div>';
     return;
   }
 
@@ -132,14 +146,11 @@ async function loadResolutions() {
 
   mesVotes = {};
   (votes || []).forEach(v => { mesVotes[v.resolution_id] = v.choix; });
-
   renderResolutions(resolutions);
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
-
-function renderResolutions(resolutions) {
-  document.getElementById('res-list').innerHTML = resolutions.map(renderCard).join('');
+function renderResolutions(list) {
+  document.getElementById('res-list').innerHTML = list.map(renderCard).join('');
 }
 
 function renderCard(r) {
@@ -169,11 +180,8 @@ function renderCard(r) {
     + '<div class="res-num">Résolution n°' + r.numero + '</div>'
     + '<div class="res-titre">' + r.titre + '</div>'
     + (r.description ? '<div class="res-desc">' + r.description + '</div>' : '')
-    + body
-    + '</div>';
+    + body + '</div>';
 }
-
-// ── Vote ──────────────────────────────────────────────────────────────────────
 
 function selectVote(resId, choix, btn) {
   pendingVote[resId] = choix;
@@ -195,9 +203,7 @@ async function confirmVote(resId) {
   if (!choix) return;
 
   const { error } = await sb.from('votes').insert({
-    resolution_id: resId,
-    votant_email:  selectedName,
-    choix,
+    resolution_id: resId, votant_email: selectedName, choix,
   });
 
   if (error) {
@@ -217,6 +223,97 @@ async function confirmVote(resId) {
   card.insertAdjacentHTML('beforeend',
     '<span class="voted-tag ' + choix + '">' + labels[choix] + '</span>'
     + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>');
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.doc-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.doc-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+async function loadDocs() {
+  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+  const all = docs || [];
+
+  // Règlement intérieur
+  const reglements = all.filter(d => d.type === 'reglement');
+  document.getElementById('reglement-list').innerHTML = reglements.length
+    ? reglements.map(d => docCard(d, '📋')).join('')
+    : '<div class="empty-state"><h3>Aucun document</h3><p>Le règlement intérieur n\'a pas encore été mis en ligne.</p></div>';
+
+  // PV CA
+  const pvs = all.filter(d => d.type === 'pv');
+  document.getElementById('pv-list').innerHTML = pvs.length
+    ? pvs.map(d => docCard(d, '📝')).join('')
+    : '<div class="empty-state"><h3>Aucun PV</h3><p>Les PV des conseils d\'administration apparaîtront ici.</p></div>';
+
+  // Chronologie
+  await loadChronologie();
+}
+
+function docCard(d, icon) {
+  return '<a href="' + d.url + '" target="_blank" class="doc-card">'
+    + '<div class="doc-icon">' + icon + '</div>'
+    + '<div class="doc-info"><h4>' + d.titre + '</h4>'
+    + '<p>' + (d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' }) : '') + '</p></div>'
+    + '<span style="color:#C8A84B;font-size:1.2rem;margin-left:auto;">↗</span>'
+    + '</a>';
+}
+
+async function loadChronologie() {
+  // Toutes les sessions CA fermées avec leurs résolutions et votes
+  const { data: sessions } = await sb
+    .from('sessions').select('*').eq('type', 'CA').eq('statut', 'fermee')
+    .order('created_at', { ascending: false });
+
+  if (!sessions?.length) {
+    document.getElementById('chrono-list').innerHTML =
+      '<div class="empty-state"><h3>Aucune décision enregistrée</h3><p>L\'historique apparaîtra ici après la clôture des sessions.</p></div>';
+    return;
+  }
+
+  let html = '';
+  for (const session of sessions) {
+    const { data: resolutions } = await sb
+      .from('resolutions').select('*').eq('session_id', session.id).order('numero');
+    if (!resolutions?.length) continue;
+
+    const resIds = resolutions.map(r => r.id);
+    const { data: votes } = await sb.from('votes').select('resolution_id, choix').in('resolution_id', resIds);
+
+    const counts = {};
+    resIds.forEach(id => { counts[id] = { pour: 0, contre: 0, abstention: 0, total: 0 }; });
+    (votes || []).forEach(v => {
+      if (counts[v.resolution_id]) { counts[v.resolution_id][v.choix]++; counts[v.resolution_id].total++; }
+    });
+
+    const date = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
+
+    html += '<div class="chrono-session">'
+      + '<div class="chrono-header">'
+      + '<div><div class="chrono-date">📅 ' + date + '</div><div class="chrono-titre">' + session.titre + '</div></div>'
+      + '<span style="color:#8fa8c8;font-size:0.8rem;">' + resolutions.length + ' décision' + (resolutions.length > 1 ? 's' : '') + '</span>'
+      + '</div>'
+      + '<div class="chrono-res">'
+      + resolutions.map(r => {
+          const c = counts[r.id];
+          let pill = '';
+          if (c.total > 0) {
+            if (c.pour > c.contre)       pill = '<span class="result-pill result-adopte">Adopté (' + c.pour + '/' + c.total + ')</span>';
+            else if (c.contre > c.pour)  pill = '<span class="result-pill result-rejete">Rejeté (' + c.contre + '/' + c.total + ')</span>';
+            else                          pill = '<span class="result-pill result-egal">Égalité</span>';
+          }
+          return '<div class="chrono-item">'
+            + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + '</span>'
+            + pill + '</div>';
+        }).join('')
+      + '</div></div>';
+  }
+
+  document.getElementById('chrono-list').innerHTML = html || '<div class="empty-state"><h3>Aucune session clôturée</h3></div>';
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

@@ -43,6 +43,7 @@ async function loadSessions() {
   sessions = data || [];
   populateSelects();
   if (sessions.length) loadAdminRes();
+  loadDocsAdmin();
 }
 
 function populateSelects() {
@@ -181,6 +182,45 @@ async function deleteRes(resId) {
   await sb.from('resolutions').delete().eq('id', resId);
   showToast('Supprimé');
   await loadAdminRes();
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+async function addDocument() {
+  const type  = document.getElementById('d-type').value;
+  const titre = document.getElementById('d-titre').value.trim();
+  const url   = document.getElementById('d-url').value.trim();
+  if (!titre || !url) return showToast('Titre et URL requis');
+  const { error } = await sb.from('documents').insert({ type, titre, url });
+  if (error) return showToast('Erreur : ' + error.message);
+  showToast('Document ajouté ✅');
+  document.getElementById('d-titre').value = '';
+  document.getElementById('d-url').value   = '';
+  await loadDocsAdmin();
+}
+
+async function loadDocsAdmin() {
+  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+  const all = docs || [];
+  const typeLabels = { reglement: '📋 Règlement', pv: '📝 PV' };
+  const el = document.getElementById('docs-admin-list');
+  if (!el) return;
+  el.innerHTML = all.length
+    ? all.map(d =>
+        '<div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f3c;border-radius:8px;padding:10px 14px;margin-bottom:8px;gap:10px;">'
+        + '<div><div style="font-size:0.78rem;color:#C8A84B;">' + (typeLabels[d.type] || d.type) + '</div>'
+        + '<div style="color:#fff;font-size:0.88rem;font-weight:600;">' + d.titre + '</div></div>'
+        + '<button class="btn-sm-grey" onclick="deleteDoc(\'' + d.id + '\')">🗑</button>'
+        + '</div>'
+      ).join('')
+    : '<p style="color:#4a5568;font-size:0.85rem;">Aucun document</p>';
+}
+
+async function deleteDoc(id) {
+  if (!confirm('Supprimer ce document ?')) return;
+  await sb.from('documents').delete().eq('id', id);
+  showToast('Document supprimé');
+  await loadDocsAdmin();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

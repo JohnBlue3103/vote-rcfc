@@ -149,7 +149,7 @@
           <button class="btn-gold" onclick="createSession()">+ Créer la session</button>
         </div>
 
-        <div class="panel">
+        <div class="panel" style="margin-bottom:20px;">
           <h3>Ajouter une résolution</h3>
           <label>Session</label>
           <select id="r-session"></select>
@@ -160,6 +160,21 @@
           <label>Description (optionnel)</label>
           <textarea id="r-desc" placeholder="Détails..."></textarea>
           <button class="btn-gold" onclick="createResolution()">+ Ajouter</button>
+        </div>
+
+        <div class="panel">
+          <h3>Ajouter un document</h3>
+          <label>Type</label>
+          <select id="d-type">
+            <option value="reglement">Règlement intérieur</option>
+            <option value="pv">PV Conseil d'Administration</option>
+          </select>
+          <label>Titre</label>
+          <input type="text" id="d-titre" placeholder="Règlement intérieur 2026"/>
+          <label>URL du fichier (Google Drive, PDF...)</label>
+          <input type="text" id="d-url" placeholder="https://drive.google.com/..."/>
+          <button class="btn-gold" onclick="addDocument()">+ Ajouter le document</button>
+          <div id="docs-admin-list" style="margin-top:16px;"></div>
         </div>
       </div>
 
