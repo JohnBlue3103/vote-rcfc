@@ -1,57 +1,59 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote — RCFC</title>
   <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0d1f3c; }
+
+    .logo-wrap { margin-bottom: 32px; text-align: center; }
+    .logo-wrap h1 { color: #C8A84B; font-size: 1.6rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .logo-wrap p  { color: #8fa8c8; font-size: 0.9rem; margin-top: 6px; }
+
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 560px; padding: 0 20px; }
+
+    .choice-card {
+      background: #162847;
+      border: 2px solid #1e3a5f;
+      border-radius: 18px;
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.2s;
+    }
+    .choice-card:hover { border-color: #C8A84B; transform: translateY(-3px); background: #1a3260; }
+    .choice-card .icon { font-size: 2.8rem; margin-bottom: 14px; }
+    .choice-card h2   { font-size: 1rem; font-weight: 800; color: #C8A84B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .choice-card p    { font-size: 0.82rem; color: #8fa8c8; line-height: 1.4; }
+
+    @media(max-width: 480px) {
+      .choice-grid { grid-template-columns: 1fr; max-width: 320px; }
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>🗳️ Espace de vote — RCFC</h1>
-    <p>Assemblée Générale / Comité d'Administration</p>
-  </div>
-</header>
-
-<main>
-
-  <!-- ÉTAPE 1 : Auth -->
-  <div id="auth-section">
-    <h2>Connexion par email</h2>
-    <p>Entrez votre adresse email. Vous recevrez un lien de connexion sécurisé.</p>
-    <input type="email" id="email-input" placeholder="votre@email.fr" />
-    <button class="btn btn-primary" onclick="sendMagicLink()">Recevoir le lien de connexion</button>
-    <p id="auth-msg" style="margin-top:16px;color:#276749;font-size:0.9rem;"></p>
+  <div class="logo-wrap">
+    <h1>🗳️ RCFC — Espace Vote</h1>
+    <p>Choisissez votre espace de vote</p>
   </div>
 
-  <!-- ÉTAPE 2 : Vote (masqué jusqu'à connexion) -->
-  <div id="vote-section" style="display:none;">
-
-    <div id="user-bar">
-      <span>Connecté : <span id="user-email"></span></span>
-      <button class="btn btn-outline btn-sm" onclick="logout()">Déconnexion</button>
-    </div>
-
-    <div id="session-info" style="display:none;">
-      <div>
-        <h2 id="session-titre"></h2>
-        <p id="session-type"></p>
-      </div>
-      <span id="session-badge" class="badge"></span>
-    </div>
-
-    <div id="resolutions-list"></div>
-
+  <div class="choice-grid">
+    <a href="ca.html" class="choice-card">
+      <div class="icon">🏛️</div>
+      <h2>Comité Directeur</h2>
+      <p>Réservé aux 16 membres du comité d'administration</p>
+    </a>
+    <a href="ag.html" class="choice-card">
+      <div class="icon">🏟️</div>
+      <h2>Assemblée Générale</h2>
+      <p>Vote ouvert à tous les membres du club</p>
+    </a>
   </div>
 
-</main>
-
-<div id="toast"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/app.js"></script>
 </body>
 </html>

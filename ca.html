@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vote Comité Directeur — RCFC</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    body { background: #0d1f3c; }
+
+    header { background: #0d1f3c; border-bottom: 2px solid #C8A84B33; }
+    header h1 { color: #C8A84B; }
+    header p  { color: #8fa8c8; }
+
+    main { max-width: 600px; margin: 32px auto; padding: 0 16px 80px; }
+
+    /* Étape 1 : sélection du nom */
+    .name-panel {
+      background: #162847;
+      border: 2px solid #1e3a5f;
+      border-radius: 18px;
+      padding: 32px;
+      text-align: center;
+    }
+    .name-panel h2 { color: #C8A84B; font-size: 1.1rem; margin-bottom: 8px; }
+    .name-panel p  { color: #8fa8c8; font-size: 0.88rem; margin-bottom: 24px; }
+
+    .name-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .name-btn {
+      background: #1a3260;
+      border: 2px solid #1e3a5f;
+      border-radius: 10px;
+      padding: 12px 10px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .name-btn:hover  { border-color: #C8A84B; background: #1e3a5f; }
+    .name-btn.active { border-color: #C8A84B; background: #C8A84B; color: #0d1f3c; }
+    .name-btn.used   { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+
+    .btn-confirm {
+      background: #C8A84B;
+      color: #0d1f3c;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 32px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+    .btn-confirm:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-confirm:not(:disabled):hover { opacity: 0.88; }
+
+    /* Vote section */
+    #vote-section { display: none; }
+
+    .voter-bar {
+      background: #162847;
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border: 1px solid #C8A84B33;
+    }
+    .voter-name { color: #C8A84B; font-weight: 700; font-size: 1rem; }
+    .voter-sub  { color: #8fa8c8; font-size: 0.8rem; margin-top: 2px; }
+    .btn-change { background: transparent; border: 1.5px solid #8fa8c8; color: #8fa8c8; border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
+    .btn-change:hover { border-color: #C8A84B; color: #C8A84B; }
+
+    /* Résolution cards CA */
+    .res-card {
+      background: #162847;
+      border: 1.5px solid #1e3a5f;
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+    .res-card.voted { border-color: #C8A84B44; background: #162847; }
+
+    .res-num   { font-size: 0.75rem; color: #8fa8c8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .res-titre { font-size: 1rem; font-weight: 700; color: #fff; margin: 6px 0 10px; }
+    .res-desc  { font-size: 0.88rem; color: #8fa8c8; margin-bottom: 16px; line-height: 1.5; }
+
+    .vote-row { display: flex; gap: 10px; }
+    .vbtn {
+      flex: 1;
+      padding: 11px 6px;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      background: #1a3260;
+      color: #8fa8c8;
+      transition: all 0.15s;
+    }
+    .vbtn:hover { transform: translateY(-1px); }
+    .vbtn.pour:hover,       .vbtn.pour.sel       { background: #1a472a; border-color: #48bb78; color: #48bb78; }
+    .vbtn.contre:hover,     .vbtn.contre.sel     { background: #4a1a1a; border-color: #fc8181; color: #fc8181; }
+    .vbtn.abstention:hover, .vbtn.abstention.sel { background: #2d2a1a; border-color: #f6e05e; color: #f6e05e; }
+
+    .confirm-row { display: flex; gap: 10px; margin-top: 12px; display: none; }
+    .confirm-row.show { display: flex; }
+    .btn-ok     { flex:1; background: #C8A84B; color: #0d1f3c; border: none; border-radius: 8px; padding: 10px; font-weight: 800; cursor: pointer; }
+    .btn-cancel { background: transparent; border: 1.5px solid #8fa8c8; color: #8fa8c8; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; }
+
+    .voted-tag {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .voted-tag.pour        { background: #1a472a; color: #48bb78; }
+    .voted-tag.contre      { background: #4a1a1a; color: #fc8181; }
+    .voted-tag.abstention  { background: #2d2a1a; color: #f6e05e; }
+
+    .closed-label { color: #4a5568; font-size: 0.88rem; font-style: italic; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #4a5568; }
+    .empty-state h3 { color: #8fa8c8; }
+
+    #toast { background: #C8A84B; color: #0d1f3c; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏛️ Vote — Comité Directeur</h1>
+    <p><a href="index.html" style="color:#8fa8c8;text-decoration:none;">← Retour à l'accueil</a></p>
+  </div>
+</header>
+
+<main>
+
+  <!-- Étape 1 : choisir son nom -->
+  <div id="name-section" class="name-panel">
+    <h2>Qui êtes-vous ?</h2>
+    <p>Sélectionnez votre nom pour accéder au vote</p>
+    <div class="name-grid" id="name-grid"></div>
+    <button class="btn-confirm" id="btn-confirm-name" disabled onclick="confirmName()">Accéder au vote →</button>
+  </div>
+
+  <!-- Étape 2 : voter -->
+  <div id="vote-section">
+    <div class="voter-bar">
+      <div>
+        <div class="voter-name" id="voter-name-display"></div>
+        <div class="voter-sub">Comité Directeur RCFC</div>
+      </div>
+      <button class="btn-change" onclick="changeName()">Changer</button>
+    </div>
+    <div id="res-list"></div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/ca.js"></script>
+</body>
+</html>
