@@ -1,3 +1,18 @@
+const MDP_CA = 'rcfc2026!1';
+
+function checkMdp() {
+  const val = document.getElementById('mdp-input').value;
+  if (val === MDP_CA) {
+    document.getElementById('mdp-section').style.display  = 'none';
+    document.getElementById('name-section').style.display = 'block';
+  } else {
+    const err = document.getElementById('mdp-error');
+    err.style.display = 'block';
+    document.getElementById('mdp-input').value = '';
+    setTimeout(() => { err.style.display = 'none'; }, 2500);
+  }
+}
+
 const MEMBRES_CA = [
   'John Bernard',    'Aderito Miranda',    'Gireg Rannou',      'Didier Mercadal',
   'Romain Hochedez', 'Alexandre Ruiz',     'Karim Hajjaji',     'Emmanuel Martinez',
@@ -15,6 +30,7 @@ let nomsUtilises = [];   // noms ayant déjà voté (pour au moins 1 résolution
 window.addEventListener('DOMContentLoaded', async () => {
   await loadNomsUtilises();
   renderNameGrid();
+  document.getElementById('mdp-input')?.focus();
 });
 
 async function loadNomsUtilises() {

@@ -14,6 +14,28 @@
 
     main { max-width: 600px; margin: 32px auto; padding: 0 16px 80px; }
 
+    /* Étape 0 : mot de passe */
+    .mdp-panel {
+      background: #162847;
+      border: 2px solid #1e3a5f;
+      border-radius: 18px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 360px;
+      margin: 60px auto 0;
+    }
+    .mdp-panel .lock { font-size: 2.8rem; margin-bottom: 16px; }
+    .mdp-panel h2 { color: #C8A84B; font-size: 1.1rem; margin-bottom: 6px; }
+    .mdp-panel p  { color: #8fa8c8; font-size: 0.85rem; margin-bottom: 24px; }
+    .mdp-input {
+      width: 100%; padding: 12px 16px; border: 2px solid #1e3a5f;
+      border-radius: 10px; background: #0d1f3c; color: #fff;
+      font-size: 1rem; outline: none; text-align: center; letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+    .mdp-input:focus { border-color: #C8A84B; }
+    .mdp-error { color: #fc8181; font-size: 0.85rem; margin-top: 8px; display: none; }
+
     /* Étape 1 : sélection du nom */
     .name-panel {
       background: #162847;
@@ -147,8 +169,19 @@
 
 <main>
 
+  <!-- Étape 0 : mot de passe -->
+  <div id="mdp-section" class="mdp-panel">
+    <div class="lock">🔒</div>
+    <h2>Accès réservé</h2>
+    <p>Entrez le mot de passe du Comité Directeur</p>
+    <input class="mdp-input" type="password" id="mdp-input" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') checkMdp()"/>
+    <button class="btn-confirm" onclick="checkMdp()">Accéder →</button>
+    <div class="mdp-error" id="mdp-error">Mot de passe incorrect</div>
+  </div>
+
   <!-- Étape 1 : choisir son nom -->
-  <div id="name-section" class="name-panel">
+  <div id="name-section" class="name-panel" style="display:none;">
     <h2>Qui êtes-vous ?</h2>
     <p>Sélectionnez votre nom pour accéder au vote</p>
     <div class="name-grid" id="name-grid"></div>
