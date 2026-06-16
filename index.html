@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vote — RCFC</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗳️ Espace de vote — RCFC</h1>
+    <p>Assemblée Générale / Comité d'Administration</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ÉTAPE 1 : Auth -->
+  <div id="auth-section">
+    <h2>Connexion par email</h2>
+    <p>Entrez votre adresse email. Vous recevrez un lien de connexion sécurisé.</p>
+    <input type="email" id="email-input" placeholder="votre@email.fr" />
+    <button class="btn btn-primary" onclick="sendMagicLink()">Recevoir le lien de connexion</button>
+    <p id="auth-msg" style="margin-top:16px;color:#276749;font-size:0.9rem;"></p>
+  </div>
+
+  <!-- ÉTAPE 2 : Vote (masqué jusqu'à connexion) -->
+  <div id="vote-section" style="display:none;">
+
+    <div id="user-bar">
+      <span>Connecté : <span id="user-email"></span></span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">Déconnexion</button>
+    </div>
+
+    <div id="session-info" style="display:none;">
+      <div>
+        <h2 id="session-titre"></h2>
+        <p id="session-type"></p>
+      </div>
+      <span id="session-badge" class="badge"></span>
+    </div>
+
+    <div id="resolutions-list"></div>
+
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

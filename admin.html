@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Vote — RCFC</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .admin-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; margin-top: 24px; }
+    @media(max-width:700px){ .admin-grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .panel h3 { font-size: 1rem; margin-bottom: 16px; color: #1a3a5c; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 10px; }
+
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; margin-top: 12px; color: #444; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e0; border-radius: 8px;
+      font-size: 0.95rem; outline: none; font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #1a3a5c; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    .res-admin-card {
+      background: #f7faff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border-left: 4px solid #cbd5e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .res-admin-card.open { border-left-color: #276749; }
+    .res-actions { display: flex; gap: 8px; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
+
+    .results-bar { margin-top: 6px; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 0.82rem; }
+    .bar-fill { height: 8px; border-radius: 4px; min-width: 4px; transition: width 0.4s; }
+    .bar-label { width: 80px; color: #666; }
+    .bar-count { color: #333; font-weight: 600; min-width: 24px; }
+
+    .session-select-row { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+    .session-select-row select { flex: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚙️ Administration des votes — RCFC</h1>
+    <p>Gestion des sessions et résolutions</p>
+  </div>
+</header>
+
+<main style="max-width:1000px;">
+
+  <div id="admin-auth">
+    <div class="panel" style="max-width:400px;margin:0 auto;">
+      <h3>Connexion administrateur</h3>
+      <label>Email</label>
+      <input type="text" id="admin-email" placeholder="admin@rcfc.fr"/>
+      <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="adminLogin()">Recevoir le lien</button>
+      <p id="admin-auth-msg" style="margin-top:12px;color:#276749;font-size:0.88rem;"></p>
+    </div>
+  </div>
+
+  <div id="admin-panel" style="display:none;">
+
+    <div id="user-bar">
+      <span>Admin : <span id="admin-user-email"></span></span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">Déconnexion</button>
+    </div>
+
+    <div class="admin-grid">
+
+      <!-- COLONNE GAUCHE : créer session + résolutions -->
+      <div>
+        <div class="panel" style="margin-bottom:20px;">
+          <h3>Nouvelle session de vote</h3>
+          <label>Titre</label>
+          <input type="text" id="s-titre" placeholder="Assemblée Générale 2026"/>
+          <label>Type</label>
+          <select id="s-type">
+            <option value="AG">AG — Assemblée Générale</option>
+            <option value="CA">CA — Comité d'Administration</option>
+          </select>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="createSession()">Créer la session</button>
+        </div>
+
+        <div class="panel">
+          <h3>Ajouter une résolution</h3>
+          <label>Session</label>
+          <select id="r-session"></select>
+          <label>N° de résolution</label>
+          <input type="number" id="r-numero" value="1" min="1"/>
+          <label>Titre</label>
+          <input type="text" id="r-titre" placeholder="Approbation du bilan financier"/>
+          <label>Description (optionnel)</label>
+          <textarea id="r-desc" placeholder="Détails de la résolution..."></textarea>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="createResolution()">Ajouter la résolution</button>
+        </div>
+      </div>
+
+      <!-- COLONNE DROITE : gestion et résultats -->
+      <div class="panel">
+        <div class="session-select-row">
+          <select id="view-session" onchange="loadAdminResolutions()"></select>
+          <button class="btn btn-sm btn-outline" onclick="refreshAdmin()">↻</button>
+        </div>
+
+        <div id="admin-session-controls" style="margin-bottom:16px;display:none;">
+          <button class="btn btn-success btn-sm" id="btn-open-session"  onclick="toggleSession('ouverte')" style="margin-right:8px;">▶ Ouvrir session</button>
+          <button class="btn btn-danger btn-sm"  id="btn-close-session" onclick="toggleSession('fermee')">■ Fermer session</button>
+        </div>
+
+        <div id="admin-res-list">
+          <div class="empty-state"><p>Sélectionnez une session</p></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
