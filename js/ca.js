@@ -300,11 +300,18 @@ async function loadChronologie() {
 
     const date = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
 
+    const votants = [...new Set((votes || []).map(v => v.votant_email))].sort();
+
     html += '<div class="chrono-session">'
       + '<div class="chrono-header">'
       + '<div><div class="chrono-date">📅 ' + date + '</div><div class="chrono-titre">' + session.titre + '</div></div>'
       + '<span style="color:#8fa8c8;font-size:0.8rem;">' + resolutions.length + ' décision' + (resolutions.length > 1 ? 's' : '') + '</span>'
       + '</div>'
+      + '<div style="padding:12px 20px;border-bottom:1px solid #1e3a5f22;">'
+      + '<div style="font-size:0.75rem;color:#C8A84B;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">👥 Membres présents (' + votants.length + '/16)</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+      + votants.map(n => '<span style="background:#1a3260;border:1px solid #1e3a5f;border-radius:999px;padding:3px 10px;font-size:0.78rem;color:#cbd5e0;">' + n + '</span>').join('')
+      + '</div></div>'
       + '<div class="chrono-res">'
       + resolutions.map(r => {
           const c = counts[r.id];
