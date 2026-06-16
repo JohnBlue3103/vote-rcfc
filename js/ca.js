@@ -56,10 +56,17 @@ function goDocs() {
   loadDocs();
 }
 
+function goChrono() {
+  hide('choice-section');
+  show('chrono-section');
+  loadChronologie();
+}
+
 function backToChoice() {
   hide('vote-section');
   hide('name-section');
   hide('docs-section');
+  hide('chrono-section');
   show('choice-section');
   selectedName = null;
   mesVotes     = {};
@@ -258,8 +265,6 @@ async function loadDocs() {
     ? pvs.map(d => docCard(d, '📝')).join('')
     : '<div class="empty-state"><h3>Aucun PV</h3><p>Les PV des conseils d\'administration apparaîtront ici.</p></div>';
 
-  // Chronologie
-  await loadChronologie();
 }
 
 function docCard(d, icon) {
