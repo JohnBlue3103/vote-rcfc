@@ -5,20 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Vote — RCFC</title>
   <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <style>
     body { background: #0d1f3c; }
-    header { background: #0d1f3c; border-bottom: 2px solid #C8A84B33; }
-    header h1 { color: #C8A84B; }
-    header p  { color: #8fa8c8; }
-
-    main { max-width: 960px; margin: 32px auto; padding: 0 16px 80px; }
+    main { max-width: 980px; margin: 28px auto; padding: 0 16px 80px; }
 
     /* MDP */
     .mdp-panel {
       background: #162847; border: 2px solid #1e3a5f; border-radius: 18px;
       padding: 40px 32px; text-align: center; max-width: 360px; margin: 60px auto 0;
     }
-    .mdp-panel .lock { font-size: 2.8rem; margin-bottom: 16px; }
     .mdp-panel h2 { color: #C8A84B; font-size: 1.1rem; margin-bottom: 6px; }
     .mdp-panel p  { color: #8fa8c8; font-size: 0.85rem; margin-bottom: 24px; }
     .mdp-input {
@@ -29,16 +25,35 @@
     .mdp-input:focus { border-color: #C8A84B; }
     .mdp-error { color: #fc8181; font-size: 0.85rem; margin-top: 8px; display: none; }
 
-    /* Admin layout */
-    .admin-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; margin-top: 24px; }
+    /* User bar */
+    .user-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #162847; border-radius: 10px; padding: 12px 18px;
+      margin-bottom: 20px; font-size: 0.88rem; color: #C8A84B; font-weight: 700;
+      border: 1px solid #C8A84B33;
+    }
+    .btn-logout { background: transparent; border: 1.5px solid #8fa8c8; color: #8fa8c8; border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
+    .btn-logout:hover { border-color: #C8A84B; color: #C8A84B; }
+
+    /* Tabs */
+    .admin-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .admin-tab {
+      padding: 10px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; border: 1.5px solid #1e3a5f; color: #8fa8c8; background: #162847;
+      transition: all 0.15s;
+    }
+    .admin-tab.active { background: #C8A84B; color: #0d1f3c; border-color: #C8A84B; }
+
+    /* Admin grid */
+    .admin-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 20px; }
     @media(max-width:700px){ .admin-grid { grid-template-columns: 1fr; } }
 
     .panel {
       background: #162847; border: 1.5px solid #1e3a5f;
-      border-radius: 16px; padding: 22px;
+      border-radius: 16px; padding: 22px; margin-bottom: 20px;
     }
     .panel h3 {
-      font-size: 0.9rem; font-weight: 700; color: #C8A84B;
+      font-size: 0.88rem; font-weight: 700; color: #C8A84B;
       text-transform: uppercase; letter-spacing: 1px;
       border-bottom: 1px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 16px;
     }
@@ -60,28 +75,23 @@
     }
     .btn-gold:hover { opacity: 0.85; }
 
-    .btn-sm-green  { background: #276749; color: #fff; border: none; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-    .btn-sm-red    { background: #9b2c2c; color: #fff; border: none; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-    .btn-sm-grey   { background: #2d3748; color: #8fa8c8; border: 1px solid #4a5568; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
+    .btn-sm-green { background: #276749; color: #fff; border: none; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .btn-sm-red   { background: #9b2c2c; color: #fff; border: none; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .btn-sm-grey  { background: #2d3748; color: #8fa8c8; border: 1px solid #4a5568; border-radius: 7px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
 
-    /* Res cards admin */
-    .res-admin {
-      background: #0d1f3c; border: 1.5px solid #1e3a5f; border-radius: 12px;
-      padding: 14px 16px; margin-bottom: 10px;
-    }
+    /* Res cards */
+    .res-admin { background: #0d1f3c; border: 1.5px solid #1e3a5f; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
     .res-admin.open { border-color: #C8A84B55; }
     .res-admin-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-    .res-admin-num  { font-size: 0.72rem; color: #8fa8c8; font-weight: 700; text-transform: uppercase; }
+    .res-admin-num   { font-size: 0.72rem; color: #8fa8c8; font-weight: 700; text-transform: uppercase; }
     .res-admin-titre { font-weight: 700; color: #fff; margin: 3px 0 8px; font-size: 0.95rem; }
     .res-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-    /* Barres résultats */
     .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
     .bar-label { width: 90px; font-size: 0.78rem; color: #8fa8c8; }
     .bar-track { flex: 1; background: #1e3a5f; border-radius: 4px; height: 8px; }
     .bar-fill  { height: 8px; border-radius: 4px; }
     .bar-count { font-size: 0.78rem; font-weight: 700; color: #fff; min-width: 20px; }
-
     .vote-total { font-size: 0.75rem; color: #4a5568; margin-top: 6px; }
 
     .session-row { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
@@ -89,15 +99,14 @@
 
     .badge-open   { background: #1a472a; color: #48bb78; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
     .badge-closed { background: #4a1a1a; color: #fc8181; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+    .type-badge   { background: #1e3a5f; color: #8fa8c8; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; margin-left: 6px; }
 
-    .user-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #162847; border-radius: 10px; padding: 12px 18px;
-      margin-bottom: 20px; font-size: 0.88rem; color: #C8A84B; font-weight: 700;
-      border: 1px solid #C8A84B33;
+    /* Quorum info box */
+    .quorum-box {
+      background: #0d1f3c; border: 1px solid #1e3a5f; border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 14px; font-size: 0.8rem; color: #8fa8c8;
     }
-    .btn-logout { background: transparent; border: 1.5px solid #8fa8c8; color: #8fa8c8; border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
-    .btn-logout:hover { border-color: #C8A84B; color: #C8A84B; }
+    .quorum-box span { font-weight: 700; }
 
     .empty-state { text-align: center; padding: 40px 20px; color: #4a5568; }
     #toast { background: #C8A84B; color: #0d1f3c; }
@@ -118,7 +127,7 @@
 
   <!-- MDP -->
   <div id="mdp-section" class="mdp-panel">
-    <div class="lock">🔐</div>
+    <div style="font-size:2.8rem;margin-bottom:16px;">⚙️</div>
     <h2>Accès administrateur</h2>
     <p>Entrez le mot de passe admin</p>
     <input class="mdp-input" type="password" id="mdp-input" placeholder="••••••••"
@@ -135,63 +144,112 @@
       <button class="btn-logout" onclick="logoutAdmin()">Déconnexion</button>
     </div>
 
-    <div class="admin-grid">
+    <!-- Onglets -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="tab-ca" onclick="switchAdminTab('ca')">⚖️ Comité Directeur</button>
+      <button class="admin-tab"        id="tab-ag" onclick="switchAdminTab('ag')">🏟️ Assemblée Générale</button>
+    </div>
 
-      <!-- COLONNE GAUCHE -->
-      <div>
-        <div class="panel" style="margin-bottom:20px;">
-          <h3>Nouvelle session</h3>
-          <label>Titre</label>
-          <input type="text" id="s-titre" placeholder="CA Juin 2026"/>
-          <label>Type</label>
-          <select id="s-type">
-            <option value="CA">Comité Directeur</option>
-            <option value="AG">Assemblée Générale</option>
-          </select>
-          <button class="btn-gold" onclick="createSession()">+ Créer la session</button>
-        </div>
+    <!-- ════════════════ COMITÉ DIRECTEUR ════════════════ -->
+    <div id="panel-ca">
+      <div class="admin-grid">
+        <div>
+          <div class="panel">
+            <h3>Nouvelle session CA</h3>
+            <label>Titre</label>
+            <input type="text" id="ca-s-titre" placeholder="CA Juin 2026"/>
+            <button class="btn-gold" onclick="createSessionCa()">+ Créer la session</button>
+          </div>
 
-        <div class="panel" style="margin-bottom:20px;">
-          <h3>Ajouter une résolution</h3>
-          <label>Session</label>
-          <select id="r-session"></select>
-          <label>N° résolution</label>
-          <input type="number" id="r-numero" value="1" min="1"/>
-          <label>Titre</label>
-          <input type="text" id="r-titre" placeholder="Approbation du bilan financier"/>
-          <label>Description (optionnel)</label>
-          <textarea id="r-desc" placeholder="Détails..."></textarea>
-          <button class="btn-gold" onclick="createResolution()">+ Ajouter</button>
+          <div class="panel">
+            <h3>Ajouter une résolution</h3>
+            <label>Session</label>
+            <select id="ca-r-session"></select>
+            <label>N° résolution</label>
+            <input type="number" id="ca-r-numero" value="1" min="1"/>
+            <label>Titre</label>
+            <input type="text" id="ca-r-titre" placeholder="Approbation du bilan financier"/>
+            <label>Description (optionnel)</label>
+            <textarea id="ca-r-desc" placeholder="Détails..."></textarea>
+            <button class="btn-gold" onclick="createResolutionCa()">+ Ajouter</button>
+          </div>
+
+          <div class="panel">
+            <h3>Ajouter un document</h3>
+            <label>Type</label>
+            <select id="d-type">
+              <option value="reglement">Règlement intérieur</option>
+              <option value="pv">PV Conseil d'Administration</option>
+            </select>
+            <label>Titre</label>
+            <input type="text" id="d-titre" placeholder="Règlement intérieur 2026"/>
+            <label>URL du fichier</label>
+            <input type="text" id="d-url" placeholder="https://drive.google.com/..."/>
+            <button class="btn-gold" onclick="addDocument()">+ Ajouter le document</button>
+            <div id="docs-admin-list" style="margin-top:16px;"></div>
+          </div>
         </div>
 
         <div class="panel">
-          <h3>Ajouter un document</h3>
-          <label>Type</label>
-          <select id="d-type">
-            <option value="reglement">Règlement intérieur</option>
-            <option value="pv">PV Conseil d'Administration</option>
-          </select>
-          <label>Titre</label>
-          <input type="text" id="d-titre" placeholder="Règlement intérieur 2026"/>
-          <label>URL du fichier (Google Drive, PDF...)</label>
-          <input type="text" id="d-url" placeholder="https://drive.google.com/..."/>
-          <button class="btn-gold" onclick="addDocument()">+ Ajouter le document</button>
-          <div id="docs-admin-list" style="margin-top:16px;"></div>
+          <h3>Résolutions & Résultats CA</h3>
+          <div class="session-row">
+            <select id="ca-view-session" onchange="loadAdminResCa()"></select>
+            <button class="btn-sm-grey" onclick="refreshAdminCa()">↻</button>
+          </div>
+          <div id="ca-session-toggle" style="display:none;margin-bottom:14px;gap:8px;flex-wrap:wrap;"></div>
+          <div id="ca-admin-res-list"><div class="empty-state"><p>Sélectionnez une session</p></div></div>
         </div>
       </div>
-
-      <!-- COLONNE DROITE -->
-      <div class="panel">
-        <h3>Résolutions & Résultats</h3>
-        <div class="session-row">
-          <select id="view-session" onchange="loadAdminRes()"></select>
-          <button class="btn-sm-grey" onclick="refreshAdmin()">↻</button>
-        </div>
-        <div id="session-toggle" style="display:none;margin-bottom:14px;display:flex;gap:8px;"></div>
-        <div id="admin-res-list"><div class="empty-state"><p>Sélectionnez une session</p></div></div>
-      </div>
-
     </div>
+
+    <!-- ════════════════ ASSEMBLÉE GÉNÉRALE ════════════════ -->
+    <div id="panel-ag" style="display:none;">
+      <div class="admin-grid">
+        <div>
+          <div class="panel">
+            <h3>Nouvelle session AG</h3>
+            <label>Titre</label>
+            <input type="text" id="ag-s-titre" placeholder="AG Annuelle 2026"/>
+            <label>Nombre de licenciés (total adhérents)</label>
+            <input type="number" id="ag-s-total" placeholder="ex: 150" min="1"/>
+            <label>Nombre de membres présents</label>
+            <input type="number" id="ag-s-presents" placeholder="ex: 62" min="1"/>
+            <button class="btn-gold" onclick="createSessionAg()">+ Créer la session AG</button>
+          </div>
+
+          <div class="panel">
+            <h3>Ajouter une résolution</h3>
+            <label>Session AG</label>
+            <select id="ag-r-session"></select>
+            <label>N° résolution</label>
+            <input type="number" id="ag-r-numero" value="1" min="1"/>
+            <label>Titre</label>
+            <input type="text" id="ag-r-titre" placeholder="Approbation des comptes 2025"/>
+            <label>Description (optionnel)</label>
+            <textarea id="ag-r-desc" placeholder="Détails..."></textarea>
+            <label>Type de vote (règle de majorité)</label>
+            <select id="ag-r-type">
+              <option value="ordinaire">Majorité simple — résolution ordinaire (Art. 12)</option>
+              <option value="statuts">Majorité 2/3 — modification des statuts (Art. 14)</option>
+              <option value="dissolution">Majorité 3/4 — dissolution (Art. 15)</option>
+            </select>
+            <button class="btn-gold" onclick="createResolutionAg()">+ Ajouter</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Résolutions & Résultats AG</h3>
+          <div class="session-row">
+            <select id="ag-view-session" onchange="loadAdminResAg()"></select>
+            <button class="btn-sm-grey" onclick="refreshAdminAg()">↻</button>
+          </div>
+          <div id="ag-session-toggle" style="display:none;margin-bottom:14px;gap:8px;flex-wrap:wrap;"></div>
+          <div id="ag-quorum-info"></div>
+          <div id="ag-admin-res-list"><div class="empty-state"><p>Sélectionnez une session</p></div></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </main>
