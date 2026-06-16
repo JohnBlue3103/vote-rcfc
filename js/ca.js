@@ -290,7 +290,7 @@ async function loadChronologie() {
     if (!resolutions?.length) continue;
 
     const resIds = resolutions.map(r => r.id);
-    const { data: votes } = await sb.from('votes').select('resolution_id, choix').in('resolution_id', resIds);
+    const { data: votes } = await sb.from('votes').select('resolution_id, choix, votant_email').in('resolution_id', resIds);
 
     const counts = {};
     resIds.forEach(id => { counts[id] = { pour: 0, contre: 0, abstention: 0, total: 0 }; });
