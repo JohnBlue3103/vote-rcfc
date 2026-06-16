@@ -143,8 +143,10 @@ async function loadAdminRes() {
 }
 
 function renderAdminCard(r, c) {
-  const total = c.total || 0;
-  const pct   = v => total ? Math.round((v / total) * 100) : 0;
+  const total    = c.total || 0;
+  const exprimes = c.pour + c.contre;
+  const pct      = v => total ? Math.round((v / total) * 100) : 0;
+  const adopte   = exprimes > 0 && (c.pour / exprimes) >= (2/3);
 
   function barRow(label, val, color) {
     return '<div class="bar-row">'
@@ -175,7 +177,9 @@ function renderAdminCard(r, c) {
     + barRow('✅ Pour',       c.pour,       '#48bb78')
     + barRow('❌ Contre',     c.contre,     '#fc8181')
     + barRow('⚪ Abstention', c.abstention, '#f6e05e')
-    + '<div class="vote-total">' + total + ' vote' + (total > 1 ? 's' : '') + ' enregistré' + (total > 1 ? 's' : '') + '</div>'
+    + '<div class="vote-total">' + total + ' vote' + (total > 1 ? 's' : '') + ' — '
+    + (exprimes > 0 ? (adopte ? '✅ Adopté aux 2/3' : '❌ Rejeté (2/3 non atteints)') : 'Aucun vote exprimé')
+    + '</div>'
     + '</div>';
 }
 

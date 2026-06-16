@@ -309,10 +309,11 @@ async function loadChronologie() {
       + resolutions.map(r => {
           const c = counts[r.id];
           let pill = '';
-          if (c.total > 0) {
-            if (c.pour > c.contre)       pill = '<span class="result-pill result-adopte">Adopté (' + c.pour + '/' + c.total + ')</span>';
-            else if (c.contre > c.pour)  pill = '<span class="result-pill result-rejete">Rejeté (' + c.contre + '/' + c.total + ')</span>';
-            else                          pill = '<span class="result-pill result-egal">Égalité</span>';
+          const exprimes = c.pour + c.contre;
+          if (exprimes > 0) {
+            const adopte = (c.pour / exprimes) >= (2/3);
+            if (adopte) pill = '<span class="result-pill result-adopte">Adopté ' + c.pour + '/' + exprimes + ' (2/3)</span>';
+            else        pill = '<span class="result-pill result-rejete">Rejeté ' + c.pour + '/' + exprimes + ' (2/3)</span>';
           }
           return '<div class="chrono-item">'
             + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + '</span>'
