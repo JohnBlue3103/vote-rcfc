@@ -209,12 +209,19 @@
     </div>
   </div>
 
-  <!-- 2A. SÉLECTION DU NOM -->
+  <!-- 2A. ENTRÉE DU CODE PERSONNEL -->
   <div id="name-section" style="display:none;" class="name-panel">
-    <h2>Qui êtes-vous ?</h2>
-    <p>Sélectionnez votre nom pour accéder au vote</p>
-    <div class="name-grid" id="name-grid"></div>
-    <button class="btn-gold" id="btn-confirm-name" disabled onclick="confirmName()">Accéder au vote →</button>
+    <div style="font-size:2.4rem;margin-bottom:14px;">🔑</div>
+    <h2>Votre code personnel</h2>
+    <p>Entrez le code qui vous a été communiqué</p>
+    <input class="mdp-input" type="text" id="code-input" placeholder="Ex: K7mP3xR9"
+      maxlength="8" autocomplete="off" autocapitalize="none"
+      onkeydown="if(event.key==='Enter') verifyCode()"/>
+    <button class="btn-gold" id="btn-code" onclick="verifyCode()">Accéder au vote →</button>
+    <div class="mdp-error" id="code-error">Code invalide ou déjà utilisé pour cette session</div>
+    <div id="code-success" style="display:none;margin-top:14px;">
+      <p style="color:#48bb78;font-weight:700;font-size:1rem;" id="code-welcome"></p>
+    </div>
   </div>
 
   <!-- 2B. VOTE -->

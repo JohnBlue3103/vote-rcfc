@@ -1,14 +1,6 @@
-const MEMBRES_CA = [
-  'John Bernard',    'Aderito Miranda',    'Gireg Rannou',      'Didier Mercadal',
-  'Romain Hochedez', 'Alexandre Ruiz',     'Karim Hajjaji',     'Emmanuel Martinez',
-  'Laurent Laborde', 'Tiffany Duclos',     'Laurent Cohen',     'Nicolas Broueilh',
-  'Joël Chich',      'Brice Mamode',       'Yohan Ayrinhac',    'Samir Benhaicha',
-];
-
 let selectedName = null;
 let mesVotes     = {};
 let pendingVote  = {};
-let nomsUtilises = [];
 
 // ── Mot de passe ──────────────────────────────────────────────────────────────
 
@@ -41,12 +33,10 @@ async function checkMdp() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('ca_auth') === '1') {
     document.getElementById('mdp-section').style.display    = 'none';
     document.getElementById('choice-section').style.display = 'block';
-    await loadNomsUtilises();
-    renderNameGrid();
   } else {
     document.getElementById('mdp-input').focus();
   }
@@ -57,6 +47,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 function goVoter() {
   hide('choice-section');
   show('name-section');
+  setTimeout(() => document.getElementById('code-input')?.focus(), 100);
 }
 
 function goDocs() {
@@ -71,52 +62,61 @@ function backToChoice() {
   hide('docs-section');
   show('choice-section');
   selectedName = null;
-  mesVotes = {};
-  pendingVote = {};
-  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn-confirm-name').disabled = true;
+  mesVotes     = {};
+  pendingVote  = {};
+  const codeInput = document.getElementById('code-input');
+  if (codeInput) codeInput.value = '';
+  const codeSuccess = document.getElementById('code-success');
+  if (codeSuccess) codeSuccess.style.display = 'none';
+  const btnCode = document.getElementById('btn-code');
+  if (btnCode) btnCode.style.display = 'block';
 }
 
 function show(id) { document.getElementById(id).style.display = 'block'; }
 function hide(id) { document.getElementById(id).style.display = 'none'; }
 
-// ── Noms utilisés ─────────────────────────────────────────────────────────────
+// ── Code personnel ────────────────────────────────────────────────────────────
 
-async function loadNomsUtilises() {
-  const session = await getActiveSession('CA');
-  if (!session) return;
-  const { data: res } = await sb.from('resolutions').select('id').eq('session_id', session.id);
-  if (!res?.length) return;
-  const { data: votes } = await sb.from('votes').select('votant_email').in('resolution_id', res.map(r => r.id));
-  nomsUtilises = [...new Set((votes || []).map(v => v.votant_email))];
-}
+async function verifyCode() {
+  const input = document.getElementById('code-input');
+  const btn   = document.getElementById('btn-code');
+  const err   = document.getElementById('code-error');
+  const code  = input.value.trim();
 
-// ── Sélection nom ─────────────────────────────────────────────────────────────
+  if (!code) return;
 
-function renderNameGrid() {
-  const grid = document.getElementById('name-grid');
-  grid.innerHTML = MEMBRES_CA.map(nom => {
-    const used    = nomsUtilises.includes(nom);
-    const safeNom = nom.replace(/'/g, "\\'");
-    return '<button class="name-btn ' + (used ? 'used' : '') + '" '
-      + (used ? 'disabled' : 'onclick="selectName(this, \'' + safeNom + '\')"')
-      + '>' + nom + (used ? ' ✓' : '') + '</button>';
-  }).join('');
-}
+  btn.disabled    = true;
+  btn.textContent = '...';
 
-function selectName(el, nom) {
-  selectedName = nom;
-  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('btn-confirm-name').disabled = false;
-}
+  const { data: membre, error } = await sb
+    .from('membres_ca')
+    .select('nom, actif')
+    .eq('code', code)
+    .single();
 
-async function confirmName() {
-  if (!selectedName) return;
-  hide('name-section');
-  show('vote-section');
-  document.getElementById('voter-name-display').textContent = selectedName;
-  await loadResolutions();
+  btn.disabled    = false;
+  btn.textContent = 'Accéder au vote →';
+
+  if (error || !membre || !membre.actif) {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+    setTimeout(() => { err.style.display = 'none'; }, 3000);
+    return;
+  }
+
+  selectedName = membre.nom;
+
+  document.getElementById('code-welcome').textContent = '👋 Bienvenue, ' + membre.nom + ' !';
+  document.getElementById('code-success').style.display = 'block';
+  btn.style.display = 'none';
+
+  setTimeout(async () => {
+    hide('name-section');
+    show('vote-section');
+    document.getElementById('voter-name-display').textContent = membre.nom;
+    await loadResolutions();
+  }, 1000);
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
