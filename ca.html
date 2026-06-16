@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Comité Directeur — RCFC</title>
   <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <style>
     body { background: #0d1f3c; }
     header { background: #0d1f3c; border-bottom: 2px solid #C8A84B33; }
@@ -30,18 +31,31 @@
 
     /* ── CHOIX ── */
     .choice-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
       margin-top: 40px;
     }
     .choice-card {
-      background: #162847; border: 2px solid #1e3a5f; border-radius: 18px;
-      padding: 40px 20px; text-align: center; cursor: pointer;
-      transition: all 0.2s; color: #fff;
+      background: #162847; border: 1.5px solid #1e3a5f; border-radius: 18px;
+      padding: 32px 18px; text-align: center; cursor: pointer;
+      transition: all 0.25s; color: #fff; position: relative; overflow: hidden;
     }
-    .choice-card:hover { border-color: #C8A84B; transform: translateY(-3px); }
-    .choice-card .icon { font-size: 3rem; margin-bottom: 16px; }
-    .choice-card h2 { color: #C8A84B; font-size: 1rem; font-weight: 800; margin-bottom: 6px; }
-    .choice-card p  { color: #8fa8c8; font-size: 0.82rem; }
+    .choice-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 0%, #C8A84B18 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .choice-card:hover { border-color: #C8A84B; transform: translateY(-4px); box-shadow: 0 10px 28px #C8A84B22; }
+    .choice-card:hover::before { opacity: 1; }
+    .choice-card .card-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(135deg, #1e3a5f, #0d1f3c);
+      border: 1.5px solid #C8A84B44;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .choice-card .card-icon svg { color: #C8A84B; }
+    .choice-card h2 { color: #C8A84B; font-size: 0.92rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .choice-card p  { color: #8fa8c8; font-size: 0.78rem; line-height: 1.4; }
     @media(max-width:480px) { .choice-grid { grid-template-columns: 1fr; } }
 
     /* ── NOM ── */
@@ -173,10 +187,11 @@
 </head>
 <body>
 
-<header>
+<header style="display:flex;align-items:center;gap:14px;padding:14px 24px;">
+  <img src="assets/logo.jpg" alt="Logo RCFC" style="height:48px;width:48px;border-radius:50%;border:2px solid #C8A84B55;"/>
   <div>
-    <h1>🏛️ Comité Directeur — RCFC</h1>
-    <p><a href="index.html" style="color:#8fa8c8;text-decoration:none;">← Retour à l'accueil</a></p>
+    <h1 style="color:#C8A84B;font-size:1.05rem;font-weight:900;letter-spacing:1px;">Comité Directeur — RCFC</h1>
+    <p><a href="index.html" style="color:#8fa8c8;text-decoration:none;font-size:0.82rem;">← Retour à l'accueil</a></p>
   </div>
 </header>
 
@@ -184,7 +199,7 @@
 
   <!-- 0. MOT DE PASSE -->
   <div id="mdp-section" class="mdp-panel">
-    <div class="lock">🔒</div>
+    <div class="lock"><i data-lucide="lock" width="44" height="44" style="color:#C8A84B;"></i></div>
     <h2>Accès réservé</h2>
     <p>Entrez le mot de passe du Comité Directeur</p>
     <input class="mdp-input" type="password" id="mdp-input" placeholder="••••••••"
@@ -197,17 +212,17 @@
   <div id="choice-section" style="display:none;">
     <div class="choice-grid" style="grid-template-columns:1fr 1fr 1fr;">
       <div class="choice-card" onclick="goVoter()">
-        <div class="icon">🗳️</div>
+        <div class="card-icon"><i data-lucide="check-square" width="26" height="26"></i></div>
         <h2>Voter</h2>
         <p>Accéder aux résolutions en cours et enregistrer mon vote</p>
       </div>
       <div class="choice-card" onclick="goDocs()">
-        <div class="icon">📄</div>
+        <div class="card-icon"><i data-lucide="folder-open" width="26" height="26"></i></div>
         <h2>Documents</h2>
         <p>Règlement intérieur et PV des conseils d'administration</p>
       </div>
       <div class="choice-card" onclick="goChrono()">
-        <div class="icon">📅</div>
+        <div class="card-icon"><i data-lucide="bar-chart-2" width="26" height="26"></i></div>
         <h2>Récapitulatif</h2>
         <p>Récapitulatif des décisions et résultats des votes passés</p>
       </div>
@@ -216,7 +231,7 @@
 
   <!-- 2A. ENTRÉE DU CODE PERSONNEL -->
   <div id="name-section" style="display:none;" class="name-panel">
-    <div style="font-size:2.4rem;margin-bottom:14px;">🔑</div>
+    <div style="margin-bottom:14px;display:flex;justify-content:center;"><i data-lucide="key-round" width="44" height="44" style="color:#C8A84B;"></i></div>
     <h2>Votre code personnel</h2>
     <p>Entrez le code qui vous a été communiqué</p>
     <input class="mdp-input" type="text" id="code-input" placeholder="Ex: K7mP3xR9"
@@ -245,12 +260,12 @@
   <div id="docs-section" style="display:none;">
     <div class="docs-header">
       <button class="btn-back-docs" onclick="backToChoice()">← Retour</button>
-      <span class="docs-title">📄 Documents</span>
+      <span class="docs-title">Documents</span>
     </div>
 
     <div class="doc-tabs">
-      <button class="doc-tab active" onclick="switchTab('reglement', this)">📋 Règlement intérieur</button>
-      <button class="doc-tab"        onclick="switchTab('pv', this)">📝 PV Conseil d'Administration</button>
+      <button class="doc-tab active" onclick="switchTab('reglement', this)">Règlement intérieur</button>
+      <button class="doc-tab"        onclick="switchTab('pv', this)">PV Conseil d'Administration</button>
     </div>
 
     <!-- Règlement intérieur -->
@@ -269,7 +284,7 @@
   <div id="chrono-section" style="display:none;">
     <div class="docs-header">
       <button class="btn-back-docs" onclick="backToChoice()">← Retour</button>
-      <span class="docs-title">📅 Récapitulatif des décisions</span>
+      <span class="docs-title">Récapitulatif des décisions</span>
     </div>
     <div id="chrono-list"><div class="empty-state"><h3>Chargement...</h3></div></div>
   </div>
@@ -281,5 +296,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/ca.js"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>
