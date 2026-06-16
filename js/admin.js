@@ -200,18 +200,15 @@ function populateSelectsAg() {
 
 async function createSessionAg() {
   const titre    = document.getElementById('ag-s-titre').value.trim();
-  const total    = parseInt(document.getElementById('ag-s-total').value)    || 0;
   const presents = parseInt(document.getElementById('ag-s-presents').value) || 0;
   if (!titre) return showToast('Titre requis');
   const { error } = await sb.from('sessions').insert({
     titre, type: 'AG',
-    nombre_membres_total: total,
     nombre_membres_presents: presents,
   });
   if (error) return showToast('Erreur : ' + error.message);
   showToast('Session AG créée ✅');
   document.getElementById('ag-s-titre').value    = '';
-  document.getElementById('ag-s-total').value    = '';
   document.getElementById('ag-s-presents').value = '';
   await loadAllSessions();
 }
@@ -253,23 +250,12 @@ async function loadAdminResAg() {
     ? '<button class="btn-sm-green" onclick="toggleSessionAg(\'ouverte\')">▶ Ouvrir la session</button>'
     : '<button class="btn-sm-red"   onclick="toggleSessionAg(\'fermee\')">■ Fermer la session</button>';
 
-  // Quorum info
-  const qEl    = document.getElementById('ag-quorum-info');
-  const total   = session?.nombre_membres_total    || 0;
+  // Présents (info seulement)
+  const qEl     = document.getElementById('ag-quorum-info');
   const present = session?.nombre_membres_presents || 0;
-  if (total && present) {
-    const pct14 = Math.ceil(total / 4);
-    const q14   = present >= pct14;
-    const q12   = present > total / 2;
-    qEl.innerHTML = '<div class="quorum-box">'
-      + '👥 <span>' + present + ' présents</span> / <span>' + total + ' licenciés</span>'
-      + '<br><span style="color:' + (q14 ? '#48bb78' : '#fc8181') + '">Quorum modification statuts (1/4 = ' + pct14 + ') : ' + (q14 ? '✅ atteint' : '❌ non atteint') + '</span>'
-      + (q12 ? '' : '<br><span style="color:#f6e05e">⚠️ Quorum dissolution non atteint — une AG extraordinaire peut délibérer 1h après (Art. 15)</span>')
-      + (!q14 ? '<br><span style="color:#f6e05e">⚠️ Quorum statuts non atteint — convocation d\'une nouvelle assemblée nécessaire (Art. 14)</span>' : '')
-      + '</div>';
-  } else {
-    qEl.innerHTML = '';
-  }
+  qEl.innerHTML = present
+    ? '<div class="quorum-box">👥 <span>' + present + ' membre' + (present > 1 ? 's' : '') + ' présent' + (present > 1 ? 's' : '') + '</span></div>'
+    : '';
 
   const { data: resolutions } = await sb
     .from('resolutions').select('*').eq('session_id', sessionId).order('numero');

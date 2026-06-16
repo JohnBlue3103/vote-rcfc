@@ -263,22 +263,11 @@ async function loadChronologieAg() {
       if (counts[v.resolution_id]) { counts[v.resolution_id][v.choix]++; counts[v.resolution_id].total++; }
     });
 
-    const date = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
-    const total   = session.nombre_membres_total    || 0;
+    const date    = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
     const present = session.nombre_membres_presents || 0;
-
-    // Infos quorum
-    let quorumHtml = '';
-    if (total && present) {
-      const pct   = Math.round((present / total) * 100);
-      const q14   = present >= Math.ceil(total / 4);
-      const q12   = present > total / 2;
-      quorumHtml = '<div style="padding:10px 20px;border-bottom:1px solid #1e3a5f22;font-size:0.78rem;color:#8fa8c8;display:flex;flex-wrap:wrap;gap:12px;">'
-        + '<span>👥 ' + present + ' présents / ' + total + ' adhérents (' + pct + '%)</span>'
-        + '<span style="color:' + (q14 ? '#48bb78' : '#fc8181') + '">Quorum statuts (1/4) : ' + (q14 ? '✅ atteint' : '❌ non atteint') + '</span>'
-        + '<span style="color:' + (q12 ? '#48bb78' : '#fc8181') + '">Quorum dissolution (1/2) : ' + (q12 ? '✅ atteint' : '❌ non atteint') + '</span>'
-        + '</div>';
-    }
+    const quorumHtml = present
+      ? '<div style="padding:10px 20px;border-bottom:1px solid #1e3a5f22;font-size:0.78rem;color:#8fa8c8;">👥 ' + present + ' membre' + (present > 1 ? 's' : '') + ' présent' + (present > 1 ? 's' : '') + '</div>'
+      : '';
 
     html += '<div class="chrono-session">'
       + '<div class="chrono-header">'
