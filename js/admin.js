@@ -371,6 +371,11 @@ function openResModal(resId) {
       + '</select>'
     : '';
 
+  const pm = r.votes_pour_manuel;
+  const cm = r.votes_contre_manuel;
+  const am = r.votes_abstention_manuel;
+  const hasManuel = pm !== null && pm !== undefined;
+
   document.getElementById('modal-content').innerHTML =
       '<label style="font-size:0.82rem;color:#8fa8c8;margin-bottom:4px;display:block;">Titre</label>'
     + '<input id="modal-titre" type="text" value="' + r.titre.replace(/"/g, '&quot;') + '"'
@@ -380,6 +385,22 @@ function openResModal(resId) {
     +   ' style="width:100%;padding:10px 12px;border:1.5px solid #1e3a5f;border-radius:8px;background:#0d1f3c;color:#fff;font-size:0.9rem;resize:vertical;min-height:120px;outline:none;font-family:inherit;line-height:1.6;box-sizing:border-box;">'
     + (r.description || '') + '</textarea>'
     + typeSelect
+    + '<div style="border-top:1px solid #1e3a5f;margin-top:18px;padding-top:16px;">'
+    + '<div style="font-size:0.82rem;color:#C8A84B;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Résultat présentiel</div>'
+    + '<div style="font-size:0.78rem;color:#4a5568;margin-bottom:12px;">Si le vote a eu lieu en séance, saisir les chiffres ci-dessous — ils remplaceront le décompte en ligne dans le récapitulatif.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'
+    + '<div><label style="font-size:0.78rem;color:#48bb78;display:block;margin-bottom:3px;">✅ Pour</label>'
+    +   '<input id="modal-pour" type="number" min="0" value="' + (hasManuel ? pm : '') + '" placeholder="—"'
+    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.9rem;outline:none;box-sizing:border-box;"/></div>'
+    + '<div><label style="font-size:0.78rem;color:#fc8181;display:block;margin-bottom:3px;">❌ Contre</label>'
+    +   '<input id="modal-contre" type="number" min="0" value="' + (hasManuel ? cm : '') + '" placeholder="—"'
+    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.9rem;outline:none;box-sizing:border-box;"/></div>'
+    + '<div><label style="font-size:0.78rem;color:#f6e05e;display:block;margin-bottom:3px;">⚪ Abstention</label>'
+    +   '<input id="modal-abstention" type="number" min="0" value="' + (hasManuel ? am : '') + '" placeholder="—"'
+    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.9rem;outline:none;box-sizing:border-box;"/></div>'
+    + '</div>'
+    + (hasManuel ? '<button onclick="clearManuel()" style="margin-top:10px;background:transparent;border:1px solid #4a5568;color:#4a5568;border-radius:7px;padding:5px 12px;font-size:0.78rem;cursor:pointer;">🗑 Effacer résultat présentiel</button>' : '')
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="saveResModal()" style="flex:1;background:#C8A84B;color:#0d1f3c;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.95rem;cursor:pointer;">Enregistrer</button>'
     + '<button onclick="closeResModal()" style="background:transparent;border:1.5px solid #8fa8c8;color:#8fa8c8;border-radius:10px;padding:12px 18px;cursor:pointer;font-weight:600;">Annuler</button>'
@@ -403,15 +424,38 @@ async function saveResModal() {
   const typeEl      = document.getElementById('modal-type');
   const type_resolution = typeEl ? typeEl.value : undefined;
 
+  const pourVal  = document.getElementById('modal-pour').value;
+  const contreVal= document.getElementById('modal-contre').value;
+  const abstVal  = document.getElementById('modal-abstention').value;
+
   if (!titre) return showToast('Le titre ne peut pas être vide');
 
   const update = { titre, description };
   if (type_resolution) update.type_resolution = type_resolution;
 
+  // Résultat présentiel : si au moins un champ rempli, on sauvegarde les 3
+  if (pourVal !== '' || contreVal !== '' || abstVal !== '') {
+    update.votes_pour_manuel       = parseInt(pourVal)   || 0;
+    update.votes_contre_manuel     = parseInt(contreVal) || 0;
+    update.votes_abstention_manuel = parseInt(abstVal)   || 0;
+  }
+
   const { error } = await sb.from('resolutions').update(update).eq('id', resId);
   if (error) return showToast('Erreur : ' + error.message);
 
   showToast('Résolution mise à jour ✅');
+  closeResModal();
+  if (r.scope === 'ca') await loadAdminResCa();
+  else                  await loadAdminResAg();
+}
+
+async function clearManuel() {
+  const resId = _modalResId;
+  const r     = resCache[resId];
+  await sb.from('resolutions').update({
+    votes_pour_manuel: null, votes_contre_manuel: null, votes_abstention_manuel: null,
+  }).eq('id', resId);
+  showToast('Résultat présentiel supprimé');
   closeResModal();
   if (r.scope === 'ca') await loadAdminResCa();
   else                  await loadAdminResAg();

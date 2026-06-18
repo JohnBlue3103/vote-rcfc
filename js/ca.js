@@ -319,7 +319,12 @@ async function loadChronologie() {
       + '</div></div>'
       + '<div class="chrono-res">'
       + resolutions.map(r => {
-          const c        = counts[r.id];
+          const online   = counts[r.id];
+          const hasManuel = r.votes_pour_manuel !== null && r.votes_pour_manuel !== undefined;
+          const c        = hasManuel
+            ? { pour: r.votes_pour_manuel, contre: r.votes_contre_manuel, abstention: r.votes_abstention_manuel }
+            : online;
+          const modeLabel = hasManuel ? ' <span style="background:#1a3260;border-radius:4px;padding:1px 6px;font-size:0.68rem;color:#8fa8c8;">présentiel</span>' : '';
           const exprimes = c.pour + c.contre;
           let pill = '';
           if (exprimes > 0) {
@@ -340,7 +345,7 @@ async function loadChronologie() {
 
           return '<div class="chrono-item" style="flex-direction:column;align-items:flex-start;gap:4px;">'
             + '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">'
-            + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + '</span>'
+            + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + modeLabel + '</span>'
             + pill + '</div>'
             + votantsRow
             + '</div>';

@@ -277,12 +277,17 @@ async function loadChronologieAg() {
       + quorumHtml
       + '<div class="chrono-res">'
       + resolutions.map(r => {
-          const c      = counts[r.id];
-          const typeRes = r.type_resolution || 'ordinaire';
-          const res    = computeResult(c, typeRes);
+          const online    = counts[r.id];
+          const hasManuel = r.votes_pour_manuel !== null && r.votes_pour_manuel !== undefined;
+          const c         = hasManuel
+            ? { pour: r.votes_pour_manuel, contre: r.votes_contre_manuel, abstention: r.votes_abstention_manuel, total: r.votes_pour_manuel + r.votes_contre_manuel + r.votes_abstention_manuel }
+            : { ...online, total: online.total };
+          const typeRes   = r.type_resolution || 'ordinaire';
+          const res       = computeResult(c, typeRes);
+          const modeLabel = hasManuel ? ' <span style="background:#1a3260;border-radius:4px;padding:1px 6px;font-size:0.68rem;color:#8fa8c8;">présentiel</span>' : '';
           return '<div class="chrono-item" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;">'
             + '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;gap:8px;">'
-            + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + '</span>'
+            + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + modeLabel + '</span>'
             + res.pill + '</div>'
             + '<div style="font-size:0.75rem;color:#4a5568;">'
             + TYPE_LABELS[typeRes]
