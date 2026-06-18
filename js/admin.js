@@ -158,11 +158,15 @@ function renderAdminCardCa(r, c) {
     ? '<button class="btn-sm-green" onclick="toggleResCa(\'' + r.id + '\',\'ouverte\')">Ouvrir</button>'
     : '<button class="btn-sm-red"   onclick="toggleResCa(\'' + r.id + '\',\'fermee\')">Fermer</button>';
 
-  return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '">'
+  const desc = r.description ? '<div style="font-size:0.8rem;color:#8fa8c8;margin-bottom:8px;">' + r.description + '</div>' : '';
+
+  return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '" id="res-ca-' + r.id + '">'
     + '<div class="res-admin-top">'
     +   '<div><div class="res-admin-num">Résolution n°' + r.numero + ' ' + badge + '</div>'
-    +        '<div class="res-admin-titre">' + r.titre + '</div></div>'
+    +        '<div class="res-admin-titre">' + r.titre + '</div>'
+    +        desc + '</div>'
     +   '<div class="res-actions">' + toggleBtn
+    +     '<button class="btn-sm-grey" onclick="toggleEditRes(\'' + r.id + '\',\'ca\')" title="Modifier">✏️</button>'
     +     '<button class="btn-sm-grey" onclick="deleteResCa(\'' + r.id + '\')">🗑</button>'
     +   '</div>'
     + '</div>'
@@ -171,7 +175,9 @@ function renderAdminCardCa(r, c) {
     + barRow('⚪ Abstention', c.abstention, '#f6e05e', pct(c.abstention))
     + '<div class="vote-total">' + total + ' vote' + (total > 1 ? 's' : '') + ' — Majorité 2/3 — '
     + (exprimes > 0 ? (adopte ? '✅ Adopté aux 2/3' : '❌ Rejeté (2/3 non atteints)') : 'Aucun vote exprimé')
-    + '</div></div>';
+    + '</div>'
+    + editForm(r, 'ca')
+    + '</div>';
 }
 
 async function toggleResCa(resId, statut) {
@@ -314,12 +320,16 @@ function renderAdminCardAg(r, c) {
     ? '<button class="btn-sm-green" onclick="toggleResAg(\'' + r.id + '\',\'ouverte\')">Ouvrir</button>'
     : '<button class="btn-sm-red"   onclick="toggleResAg(\'' + r.id + '\',\'fermee\')">Fermer</button>';
 
-  return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '">'
+  const desc = r.description ? '<div style="font-size:0.8rem;color:#8fa8c8;margin-bottom:8px;">' + r.description + '</div>' : '';
+
+  return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '" id="res-ag-' + r.id + '">'
     + '<div class="res-admin-top">'
     +   '<div><div class="res-admin-num">Résolution n°' + r.numero + ' ' + badge
     +        ' <span class="type-badge">' + typeLabel + '</span></div>'
-    +        '<div class="res-admin-titre">' + r.titre + '</div></div>'
+    +        '<div class="res-admin-titre">' + r.titre + '</div>'
+    +        desc + '</div>'
     +   '<div class="res-actions">' + toggleBtn
+    +     '<button class="btn-sm-grey" onclick="toggleEditRes(\'' + r.id + '\',\'ag\')" title="Modifier">✏️</button>'
     +     '<button class="btn-sm-grey" onclick="deleteResAg(\'' + r.id + '\')">🗑</button>'
     +   '</div>'
     + '</div>'
@@ -327,6 +337,7 @@ function renderAdminCardAg(r, c) {
     + barRow('❌ Contre',     c.contre,     '#fc8181', pct(c.contre))
     + barRow('⚪ Abstention', c.abstention, '#f6e05e', pct(c.abstention))
     + '<div class="vote-total">' + total + ' votant' + (total > 1 ? 's' : '') + ' — ' + res.label + '</div>'
+    + editForm(r, 'ag')
     + '</div>';
 }
 
@@ -341,6 +352,57 @@ async function deleteResAg(resId) {
   await sb.from('resolutions').delete().eq('id', resId);
   showToast('Supprimé');
   await loadAdminResAg();
+}
+
+// ── Édition inline des résolutions ───────────────────────────────────────────
+
+function editForm(r, scope) {
+  const typeSelect = scope === 'ag'
+    ? '<label style="font-size:0.8rem;color:#8fa8c8;margin:8px 0 3px;display:block;">Type de vote</label>'
+      + '<select id="edit-type-' + r.id + '" style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;margin-bottom:10px;">'
+      + '<option value="ordinaire"'   + (r.type_resolution === 'ordinaire'   ? ' selected' : '') + '>Majorité simple</option>'
+      + '<option value="statuts"'     + (r.type_resolution === 'statuts'     ? ' selected' : '') + '>2/3 — Modification statuts</option>'
+      + '<option value="dissolution"' + (r.type_resolution === 'dissolution' ? ' selected' : '') + '>3/4 — Dissolution</option>'
+      + '</select>'
+    : '';
+
+  return '<div id="edit-form-' + r.id + '" style="display:none;margin-top:12px;border-top:1px solid #1e3a5f;padding-top:14px;">'
+    + '<label style="font-size:0.8rem;color:#8fa8c8;margin-bottom:3px;display:block;">Titre</label>'
+    + '<input id="edit-titre-' + r.id + '" type="text" value="' + r.titre.replace(/"/g, '&quot;') + '"'
+    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;margin-bottom:10px;outline:none;font-family:inherit;"/>'
+    + '<label style="font-size:0.8rem;color:#8fa8c8;margin-bottom:3px;display:block;">Description</label>'
+    + '<textarea id="edit-desc-' + r.id + '"'
+    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;resize:vertical;min-height:60px;margin-bottom:10px;outline:none;font-family:inherit;">'
+    + (r.description || '') + '</textarea>'
+    + typeSelect
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="saveRes(\'' + r.id + '\',\'' + scope + '\')" style="flex:1;background:#C8A84B;color:#0d1f3c;border:none;border-radius:8px;padding:9px;font-weight:800;cursor:pointer;">Enregistrer</button>'
+    + '<button onclick="toggleEditRes(\'' + r.id + '\',\'' + scope + '\')" style="background:transparent;border:1.5px solid #8fa8c8;color:#8fa8c8;border-radius:8px;padding:9px 14px;cursor:pointer;">Annuler</button>'
+    + '</div></div>';
+}
+
+function toggleEditRes(resId, scope) {
+  const form = document.getElementById('edit-form-' + resId);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveRes(resId, scope) {
+  const titre       = document.getElementById('edit-titre-' + resId).value.trim();
+  const description = document.getElementById('edit-desc-'  + resId).value.trim();
+  const typeEl      = document.getElementById('edit-type-'  + resId);
+  const type_resolution = typeEl ? typeEl.value : undefined;
+
+  if (!titre) return showToast('Le titre ne peut pas être vide');
+
+  const update = { titre, description };
+  if (type_resolution) update.type_resolution = type_resolution;
+
+  const { error } = await sb.from('resolutions').update(update).eq('id', resId);
+  if (error) return showToast('Erreur : ' + error.message);
+
+  showToast('Résolution mise à jour ✅');
+  if (scope === 'ca') await loadAdminResCa();
+  else                await loadAdminResAg();
 }
 
 // ── Utilitaires ───────────────────────────────────────────────────────────────
