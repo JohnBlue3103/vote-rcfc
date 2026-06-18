@@ -173,11 +173,10 @@ function renderAdminCardCa(r, c) {
     + barRow('✅ Pour',       c.pour,       '#48bb78', pct(c.pour))
     + barRow('❌ Contre',     c.contre,     '#fc8181', pct(c.contre))
     + barRow('⚪ Abstention', c.abstention, '#f6e05e', pct(c.abstention))
+    + (r.description ? '<div class="res-desc-preview">' + r.description + '</div>' : '')
     + '<div class="vote-total">' + total + ' vote' + (total > 1 ? 's' : '') + ' — Majorité 2/3 — '
     + (exprimes > 0 ? (adopte ? '✅ Adopté aux 2/3' : '❌ Rejeté (2/3 non atteints)') : 'Aucun vote exprimé')
-    + '</div>'
-    + editForm(r, 'ca')
-    + '</div>';
+    + '</div></div>';
 }
 
 async function toggleResCa(resId, statut) {
