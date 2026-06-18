@@ -1,5 +1,6 @@
 let sessionsCa = [];
 let sessionsAg = [];
+let resCache   = {}; // stocke les objets résolution pour le modal
 
 // ── Mot de passe ──────────────────────────────────────────────────────────────
 
@@ -153,20 +154,19 @@ function renderAdminCardCa(r, c) {
   const adopte   = exprimes > 0 && (c.pour / exprimes) >= (2 / 3);
   const pct      = v => total ? Math.round((v / total) * 100) : 0;
 
+  resCache[r.id] = { ...r, scope: 'ca' };
+
   const badge     = r.statut === 'ouverte' ? '<span class="badge-open">Ouvert</span>' : '<span class="badge-closed">Fermé</span>';
   const toggleBtn = r.statut === 'fermee'
     ? '<button class="btn-sm-green" onclick="toggleResCa(\'' + r.id + '\',\'ouverte\')">Ouvrir</button>'
     : '<button class="btn-sm-red"   onclick="toggleResCa(\'' + r.id + '\',\'fermee\')">Fermer</button>';
 
-  const desc = r.description ? '<div style="font-size:0.8rem;color:#8fa8c8;margin-bottom:8px;">' + r.description + '</div>' : '';
-
   return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '" id="res-ca-' + r.id + '">'
     + '<div class="res-admin-top">'
     +   '<div><div class="res-admin-num">Résolution n°' + r.numero + ' ' + badge + '</div>'
-    +        '<div class="res-admin-titre">' + r.titre + '</div>'
-    +        desc + '</div>'
+    +        '<div class="res-admin-titre" onclick="openResModal(\'' + r.id + '\')" style="cursor:pointer;" title="Voir / modifier">' + r.titre + ' <span style="font-size:0.7rem;color:#C8A84B44;">↗</span></div></div>'
     +   '<div class="res-actions">' + toggleBtn
-    +     '<button class="btn-sm-grey" onclick="toggleEditRes(\'' + r.id + '\',\'ca\')" title="Modifier">✏️</button>'
+    +     '<button class="btn-sm-grey" onclick="openResModal(\'' + r.id + '\')" title="Modifier">✏️</button>'
     +     '<button class="btn-sm-grey" onclick="deleteResCa(\'' + r.id + '\')">🗑</button>'
     +   '</div>'
     + '</div>'
@@ -315,21 +315,20 @@ function renderAdminCardAg(r, c) {
   const pct      = v => total ? Math.round((v / total) * 100) : 0;
   const res      = computeResultAg(c, typeRes);
 
+  resCache[r.id] = { ...r, scope: 'ag' };
+
   const badge     = r.statut === 'ouverte' ? '<span class="badge-open">Ouvert</span>' : '<span class="badge-closed">Fermé</span>';
   const toggleBtn = r.statut === 'fermee'
     ? '<button class="btn-sm-green" onclick="toggleResAg(\'' + r.id + '\',\'ouverte\')">Ouvrir</button>'
     : '<button class="btn-sm-red"   onclick="toggleResAg(\'' + r.id + '\',\'fermee\')">Fermer</button>';
 
-  const desc = r.description ? '<div style="font-size:0.8rem;color:#8fa8c8;margin-bottom:8px;">' + r.description + '</div>' : '';
-
   return '<div class="res-admin ' + (r.statut === 'ouverte' ? 'open' : '') + '" id="res-ag-' + r.id + '">'
     + '<div class="res-admin-top">'
     +   '<div><div class="res-admin-num">Résolution n°' + r.numero + ' ' + badge
     +        ' <span class="type-badge">' + typeLabel + '</span></div>'
-    +        '<div class="res-admin-titre">' + r.titre + '</div>'
-    +        desc + '</div>'
+    +        '<div class="res-admin-titre" onclick="openResModal(\'' + r.id + '\')" style="cursor:pointer;" title="Voir / modifier">' + r.titre + ' <span style="font-size:0.7rem;color:#C8A84B44;">↗</span></div></div>'
     +   '<div class="res-actions">' + toggleBtn
-    +     '<button class="btn-sm-grey" onclick="toggleEditRes(\'' + r.id + '\',\'ag\')" title="Modifier">✏️</button>'
+    +     '<button class="btn-sm-grey" onclick="openResModal(\'' + r.id + '\')" title="Modifier">✏️</button>'
     +     '<button class="btn-sm-grey" onclick="deleteResAg(\'' + r.id + '\')">🗑</button>'
     +   '</div>'
     + '</div>'
@@ -337,7 +336,6 @@ function renderAdminCardAg(r, c) {
     + barRow('❌ Contre',     c.contre,     '#fc8181', pct(c.contre))
     + barRow('⚪ Abstention', c.abstention, '#f6e05e', pct(c.abstention))
     + '<div class="vote-total">' + total + ' votant' + (total > 1 ? 's' : '') + ' — ' + res.label + '</div>'
-    + editForm(r, 'ag')
     + '</div>';
 }
 
@@ -354,42 +352,56 @@ async function deleteResAg(resId) {
   await loadAdminResAg();
 }
 
-// ── Édition inline des résolutions ───────────────────────────────────────────
+// ── Modal détail / édition résolution ────────────────────────────────────────
 
-function editForm(r, scope) {
-  const typeSelect = scope === 'ag'
-    ? '<label style="font-size:0.8rem;color:#8fa8c8;margin:8px 0 3px;display:block;">Type de vote</label>'
-      + '<select id="edit-type-' + r.id + '" style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;margin-bottom:10px;">'
-      + '<option value="ordinaire"'   + (r.type_resolution === 'ordinaire'   ? ' selected' : '') + '>Majorité simple</option>'
-      + '<option value="statuts"'     + (r.type_resolution === 'statuts'     ? ' selected' : '') + '>2/3 — Modification statuts</option>'
-      + '<option value="dissolution"' + (r.type_resolution === 'dissolution' ? ' selected' : '') + '>3/4 — Dissolution</option>'
+let _modalResId = null;
+
+function openResModal(resId) {
+  const r     = resCache[resId];
+  if (!r) return;
+  _modalResId = resId;
+
+  document.getElementById('modal-num').textContent = 'Résolution n°' + r.numero;
+
+  const typeSelect = r.scope === 'ag'
+    ? '<label style="font-size:0.82rem;color:#8fa8c8;margin:14px 0 4px;display:block;">Type de vote</label>'
+      + '<select id="modal-type" style="width:100%;padding:9px;border:1.5px solid #1e3a5f;border-radius:8px;background:#0d1f3c;color:#fff;font-size:0.9rem;outline:none;font-family:inherit;">'
+      + '<option value="ordinaire"'   + (r.type_resolution === 'ordinaire'   ? ' selected' : '') + '>Majorité simple (résolution ordinaire)</option>'
+      + '<option value="statuts"'     + (r.type_resolution === 'statuts'     ? ' selected' : '') + '>Majorité 2/3 — Modification statuts</option>'
+      + '<option value="dissolution"' + (r.type_resolution === 'dissolution' ? ' selected' : '') + '>Majorité 3/4 — Dissolution</option>'
       + '</select>'
     : '';
 
-  return '<div id="edit-form-' + r.id + '" style="display:none;margin-top:12px;border-top:1px solid #1e3a5f;padding-top:14px;">'
-    + '<label style="font-size:0.8rem;color:#8fa8c8;margin-bottom:3px;display:block;">Titre</label>'
-    + '<input id="edit-titre-' + r.id + '" type="text" value="' + r.titre.replace(/"/g, '&quot;') + '"'
-    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;margin-bottom:10px;outline:none;font-family:inherit;"/>'
-    + '<label style="font-size:0.8rem;color:#8fa8c8;margin-bottom:3px;display:block;">Description</label>'
-    + '<textarea id="edit-desc-' + r.id + '"'
-    +   ' style="width:100%;padding:8px;border:1.5px solid #1e3a5f;border-radius:7px;background:#0d1f3c;color:#fff;font-size:0.88rem;resize:vertical;min-height:60px;margin-bottom:10px;outline:none;font-family:inherit;">'
+  document.getElementById('modal-content').innerHTML =
+      '<label style="font-size:0.82rem;color:#8fa8c8;margin-bottom:4px;display:block;">Titre</label>'
+    + '<input id="modal-titre" type="text" value="' + r.titre.replace(/"/g, '&quot;') + '"'
+    +   ' style="width:100%;padding:10px 12px;border:1.5px solid #1e3a5f;border-radius:8px;background:#0d1f3c;color:#fff;font-size:0.95rem;outline:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"/>'
+    + '<label style="font-size:0.82rem;color:#8fa8c8;margin-bottom:4px;display:block;">Description</label>'
+    + '<textarea id="modal-desc"'
+    +   ' style="width:100%;padding:10px 12px;border:1.5px solid #1e3a5f;border-radius:8px;background:#0d1f3c;color:#fff;font-size:0.9rem;resize:vertical;min-height:120px;outline:none;font-family:inherit;line-height:1.6;box-sizing:border-box;">'
     + (r.description || '') + '</textarea>'
     + typeSelect
-    + '<div style="display:flex;gap:8px;">'
-    + '<button onclick="saveRes(\'' + r.id + '\',\'' + scope + '\')" style="flex:1;background:#C8A84B;color:#0d1f3c;border:none;border-radius:8px;padding:9px;font-weight:800;cursor:pointer;">Enregistrer</button>'
-    + '<button onclick="toggleEditRes(\'' + r.id + '\',\'' + scope + '\')" style="background:transparent;border:1.5px solid #8fa8c8;color:#8fa8c8;border-radius:8px;padding:9px 14px;cursor:pointer;">Annuler</button>'
-    + '</div></div>';
+    + '<div style="display:flex;gap:10px;margin-top:18px;">'
+    + '<button onclick="saveResModal()" style="flex:1;background:#C8A84B;color:#0d1f3c;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.95rem;cursor:pointer;">Enregistrer</button>'
+    + '<button onclick="closeResModal()" style="background:transparent;border:1.5px solid #8fa8c8;color:#8fa8c8;border-radius:10px;padding:12px 18px;cursor:pointer;font-weight:600;">Annuler</button>'
+    + '</div>';
+
+  document.getElementById('res-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
 }
 
-function toggleEditRes(resId, scope) {
-  const form = document.getElementById('edit-form-' + resId);
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+function closeResModal() {
+  document.getElementById('res-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _modalResId = null;
 }
 
-async function saveRes(resId, scope) {
-  const titre       = document.getElementById('edit-titre-' + resId).value.trim();
-  const description = document.getElementById('edit-desc-'  + resId).value.trim();
-  const typeEl      = document.getElementById('edit-type-'  + resId);
+async function saveResModal() {
+  const resId       = _modalResId;
+  const r           = resCache[resId];
+  const titre       = document.getElementById('modal-titre').value.trim();
+  const description = document.getElementById('modal-desc').value.trim();
+  const typeEl      = document.getElementById('modal-type');
   const type_resolution = typeEl ? typeEl.value : undefined;
 
   if (!titre) return showToast('Le titre ne peut pas être vide');
@@ -401,8 +413,9 @@ async function saveRes(resId, scope) {
   if (error) return showToast('Erreur : ' + error.message);
 
   showToast('Résolution mise à jour ✅');
-  if (scope === 'ca') await loadAdminResCa();
-  else                await loadAdminResAg();
+  closeResModal();
+  if (r.scope === 'ca') await loadAdminResCa();
+  else                  await loadAdminResAg();
 }
 
 // ── Utilitaires ───────────────────────────────────────────────────────────────

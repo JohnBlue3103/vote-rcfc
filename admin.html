@@ -252,6 +252,17 @@
 
 </main>
 
+<!-- Modal détail résolution -->
+<div id="res-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:999;overflow-y:auto;padding:24px 16px;">
+  <div style="background:#162847;border:1.5px solid #C8A84B44;border-radius:18px;max-width:600px;margin:0 auto;padding:28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span style="color:#C8A84B;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;" id="modal-num"></span>
+      <button onclick="closeResModal()" style="background:transparent;border:1.5px solid #8fa8c8;color:#8fa8c8;border-radius:8px;padding:5px 12px;cursor:pointer;">✕ Fermer</button>
+    </div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
