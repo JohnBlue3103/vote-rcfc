@@ -88,7 +88,8 @@ function switchAgTab(tab) {
 
 async function loadDocsAg() {
   const listEl = document.getElementById('ag-docs-list');
-  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+  const { data: docs } = await sb.from('documents').select('*')
+    .in('type', ['reglement_ag', 'pv_ag']).order('created_at', { ascending: false });
 
   if (!docs?.length) {
     listEl.innerHTML = '<div class="empty-state"><h3>Aucun document</h3><p>Les documents seront mis en ligne par l\'administrateur.</p></div>';

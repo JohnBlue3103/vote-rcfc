@@ -251,7 +251,8 @@ function switchTab(tab, btn) {
 }
 
 async function loadDocs() {
-  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+  const { data: docs } = await sb.from('documents').select('*')
+    .in('type', ['reglement', 'pv']).order('created_at', { ascending: false });
   const all = docs || [];
 
   // Règlement intérieur

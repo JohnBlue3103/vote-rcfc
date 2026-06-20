@@ -120,6 +120,7 @@ async function loadAllSessions() {
   if (sessionsCa.length) loadAdminResCa();
   if (sessionsAg.length) loadAdminResAg();
   loadDocsAdmin();
+  loadDocsAdminAg();
   loadMembresAg();
 }
 
@@ -528,6 +529,19 @@ function barRow(label, val, color, pct) {
 
 // ── Documents ─────────────────────────────────────────────────────────────────
 
+function renderDocList(docs, el, reloadFn) {
+  const typeLabels = { reglement: '📋 Règlement', pv: '📝 PV CA', reglement_ag: '📋 Règlement AG', pv_ag: '📝 PV AG' };
+  el.innerHTML = docs.length
+    ? docs.map(d =>
+        '<div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f3c;border-radius:8px;padding:10px 14px;margin-bottom:8px;gap:10px;">'
+        + '<div><div style="font-size:0.78rem;color:#C8A84B;">' + (typeLabels[d.type] || d.type) + '</div>'
+        + '<div style="color:#fff;font-size:0.88rem;font-weight:600;">' + d.titre + '</div></div>'
+        + '<button class="btn-sm-grey" onclick="deleteDoc(\'' + d.id + '\',\'' + reloadFn + '\')">🗑</button>'
+        + '</div>'
+      ).join('')
+    : '<p style="color:#4a5568;font-size:0.85rem;">Aucun document</p>';
+}
+
 async function addDocument() {
   const type  = document.getElementById('d-type').value;
   const titre = document.getElementById('d-titre').value.trim();
@@ -542,27 +556,40 @@ async function addDocument() {
 }
 
 async function loadDocsAdmin() {
-  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
-  const all = docs || [];
-  const typeLabels = { reglement: '📋 Règlement', pv: '📝 PV' };
+  const { data: docs } = await sb.from('documents').select('*')
+    .in('type', ['reglement', 'pv']).order('created_at', { ascending: false });
   const el = document.getElementById('docs-admin-list');
   if (!el) return;
-  el.innerHTML = all.length
-    ? all.map(d =>
-        '<div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f3c;border-radius:8px;padding:10px 14px;margin-bottom:8px;gap:10px;">'
-        + '<div><div style="font-size:0.78rem;color:#C8A84B;">' + (typeLabels[d.type] || d.type) + '</div>'
-        + '<div style="color:#fff;font-size:0.88rem;font-weight:600;">' + d.titre + '</div></div>'
-        + '<button class="btn-sm-grey" onclick="deleteDoc(\'' + d.id + '\')">🗑</button>'
-        + '</div>'
-      ).join('')
-    : '<p style="color:#4a5568;font-size:0.85rem;">Aucun document</p>';
+  renderDocList(docs || [], el, 'loadDocsAdmin');
 }
 
-async function deleteDoc(id) {
+async function addDocumentAg() {
+  const type  = document.getElementById('ag-d-type').value;
+  const titre = document.getElementById('ag-d-titre').value.trim();
+  const url   = document.getElementById('ag-d-url').value.trim();
+  if (!titre || !url) return showToast('Titre et URL requis');
+  const { error } = await sb.from('documents').insert({ type, titre, url });
+  if (error) return showToast('Erreur : ' + error.message);
+  showToast('Document AG ajouté ✅');
+  document.getElementById('ag-d-titre').value = '';
+  document.getElementById('ag-d-url').value   = '';
+  await loadDocsAdminAg();
+}
+
+async function loadDocsAdminAg() {
+  const { data: docs } = await sb.from('documents').select('*')
+    .in('type', ['reglement_ag', 'pv_ag']).order('created_at', { ascending: false });
+  const el = document.getElementById('ag-docs-admin-list');
+  if (!el) return;
+  renderDocList(docs || [], el, 'loadDocsAdminAg');
+}
+
+async function deleteDoc(id, reloadFn) {
   if (!confirm('Supprimer ce document ?')) return;
   await sb.from('documents').delete().eq('id', id);
   showToast('Document supprimé');
-  await loadDocsAdmin();
+  if (reloadFn === 'loadDocsAdminAg') await loadDocsAdminAg();
+  else await loadDocsAdmin();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

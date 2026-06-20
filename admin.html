@@ -231,6 +231,21 @@
           </div>
 
           <div class="panel">
+            <h3>Ajouter un document AG</h3>
+            <label>Type</label>
+            <select id="ag-d-type">
+              <option value="reglement_ag">Règlement intérieur</option>
+              <option value="pv_ag">PV Assemblée Générale</option>
+            </select>
+            <label>Titre</label>
+            <input type="text" id="ag-d-titre" placeholder="PV AG 2026"/>
+            <label>URL du fichier</label>
+            <input type="text" id="ag-d-url" placeholder="https://drive.google.com/..."/>
+            <button class="btn-gold" onclick="addDocumentAg()">+ Ajouter le document</button>
+            <div id="ag-docs-admin-list" style="margin-top:16px;"></div>
+          </div>
+
+          <div class="panel">
             <h3>Ajouter une résolution</h3>
             <label>Session AG</label>
             <select id="ag-r-session"></select>
