@@ -1,85 +1,112 @@
-let mesVotesAg  = {};
-let pendingVoteAg = {};
+let selectedCodeAg = null;
+let selectedIdAg   = null;
+let mesVotesAg     = {};
+let pendingVoteAg  = {};
+let chronoLoaded   = false;
 
-// ── Mot de passe ──────────────────────────────────────────────────────────────
+// ── Code adhérent ─────────────────────────────────────────────────────────────
 
-async function checkMdpAg() {
-  const input = document.getElementById('mdp-input');
-  const btn   = document.getElementById('btn-mdp');
-  const err   = document.getElementById('mdp-error');
+async function verifyCodeAg() {
+  const input = document.getElementById('code-input');
+  const btn   = document.getElementById('btn-code');
+  const err   = document.getElementById('code-error');
+  const code  = input.value.trim().toUpperCase();
+  if (!code) return;
 
   btn.disabled    = true;
   btn.textContent = '...';
 
-  const { data: ok, error } = await sb.rpc('verify_mdp_ag', { mdp: input.value });
+  const { data, error } = await sb.rpc('verify_code_ag', { p_code: code });
 
   btn.disabled    = false;
   btn.textContent = 'Accéder →';
 
-  if (error) { showToast('Erreur serveur : ' + error.message); return; }
-
-  if (ok === true) {
-    sessionStorage.setItem('ag_auth', '1');
-    document.getElementById('mdp-section').style.display    = 'none';
-    document.getElementById('choice-section').style.display = 'block';
-  } else {
+  if (error || !data?.ok) {
     err.style.display = 'block';
     input.value = '';
     input.focus();
-    setTimeout(() => { err.style.display = 'none'; }, 2500);
+    setTimeout(() => { err.style.display = 'none'; }, 3000);
+    return;
   }
+
+  selectedCodeAg = code;
+  selectedIdAg   = data.id;
+  sessionStorage.setItem('ag_auth_code', code);
+  sessionStorage.setItem('ag_auth_id',   data.id);
+  sessionStorage.setItem('ag_auth_nom',  data.nom);
+  showMainSection(data.nom);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('ag_auth') === '1') {
-    document.getElementById('mdp-section').style.display    = 'none';
-    document.getElementById('choice-section').style.display = 'block';
+  const savedCode = sessionStorage.getItem('ag_auth_code');
+  const savedId   = sessionStorage.getItem('ag_auth_id');
+  const savedNom  = sessionStorage.getItem('ag_auth_nom');
+  if (savedCode && savedId && savedNom) {
+    selectedCodeAg = savedCode;
+    selectedIdAg   = savedId;
+    showMainSection(savedNom);
   } else {
-    document.getElementById('mdp-input').focus();
+    document.getElementById('code-input').focus();
   }
 });
 
-// ── Identifiant anonyme (anti double-vote par appareil) ───────────────────────
+function showMainSection(nom) {
+  document.getElementById('code-section').style.display = 'none';
+  document.getElementById('main-section').style.display = 'block';
+  document.getElementById('ag-membre-nom').textContent  = nom;
+  switchAgTab('vote');
+  lucide.createIcons();
+}
 
-function getVoterId() {
-  let id = sessionStorage.getItem('ag_voter_id');
-  if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID()
-       : Math.random().toString(36).slice(2) + Date.now().toString(36);
-    sessionStorage.setItem('ag_voter_id', id);
+function logoutAg() {
+  sessionStorage.removeItem('ag_auth_code');
+  sessionStorage.removeItem('ag_auth_id');
+  sessionStorage.removeItem('ag_auth_nom');
+  selectedCodeAg = null;
+  selectedIdAg   = null;
+  mesVotesAg     = {};
+  pendingVoteAg  = {};
+  chronoLoaded   = false;
+  document.getElementById('main-section').style.display = 'none';
+  document.getElementById('code-section').style.display = 'block';
+  document.getElementById('code-input').value = '';
+  document.getElementById('code-input').focus();
+}
+
+// ── Onglets ───────────────────────────────────────────────────────────────────
+
+function switchAgTab(tab) {
+  document.getElementById('panel-docs').style.display = tab === 'docs' ? 'block' : 'none';
+  document.getElementById('panel-vote').style.display = tab === 'vote' ? 'block' : 'none';
+  document.getElementById('tab-docs').classList.toggle('active', tab === 'docs');
+  document.getElementById('tab-vote').classList.toggle('active', tab === 'vote');
+  if (tab === 'docs') loadDocsAg();
+  if (tab === 'vote') loadResolutionsAg();
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+async function loadDocsAg() {
+  const listEl = document.getElementById('ag-docs-list');
+  const { data: docs } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+
+  if (!docs?.length) {
+    listEl.innerHTML = '<div class="empty-state"><h3>Aucun document</h3><p>Les documents seront mis en ligne par l\'administrateur.</p></div>';
+    return;
   }
-  return id;
+
+  listEl.innerHTML = docs.map(d => {
+    const icon = d.type === 'reglement' ? '📋' : '📝';
+    const date = d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' }) : '';
+    return '<a href="' + d.url + '" target="_blank" class="doc-card">'
+      + '<div class="doc-icon">' + icon + '</div>'
+      + '<div class="doc-info"><h4>' + d.titre + '</h4><p>' + date + '</p></div>'
+      + '<span style="color:#C8A84B;font-size:1.2rem;margin-left:auto;">↗</span>'
+      + '</a>';
+  }).join('');
 }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-
-function goVoter() {
-  hide('choice-section');
-  show('vote-section');
-  loadResolutionsAg();
-}
-
-function goChrono() {
-  hide('choice-section');
-  show('chrono-section');
-  loadChronologieAg();
-}
-
-function backToChoice() {
-  hide('vote-section');
-  hide('chrono-section');
-  show('choice-section');
-  mesVotesAg    = {};
-  pendingVoteAg = {};
-}
-
-function show(id) { document.getElementById(id).style.display = 'block'; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
-
-// ── Règles de majorité (statuts RCFC) ─────────────────────────────────────────
-// Art.12 : majorité simple (pour > contre)
-// Art.14 : 2/3 des exprimés pour modification des statuts
-// Art.15 : 3/4 des exprimés pour dissolution
+// ── Règles de majorité ────────────────────────────────────────────────────────
 
 const TYPE_LABELS = {
   ordinaire:   'Majorité simple',
@@ -101,7 +128,6 @@ function computeResult(c, typeRes) {
     adopte = (c.pour / exprimes) >= (2 / 3);
     texte  = 'aux 2/3 — ' + c.pour + '/' + exprimes;
   } else {
-    // majorité simple : pour > contre
     adopte = c.pour > c.contre;
     texte  = c.pour + ' Pour / ' + c.contre + ' Contre';
   }
@@ -113,7 +139,7 @@ function computeResult(c, typeRes) {
   return { adopte, pill };
 }
 
-// ── Chargement des résolutions ────────────────────────────────────────────────
+// ── Vote ──────────────────────────────────────────────────────────────────────
 
 async function loadResolutionsAg() {
   const { data: rows } = await sb
@@ -123,13 +149,12 @@ async function loadResolutionsAg() {
   const listEl  = document.getElementById('ag-res-list');
 
   if (!session) {
-    listEl.innerHTML = '<div class="empty-state"><h3>Aucune session AG active</h3>'
-      + '<p>L\'administrateur doit créer une session AG.</p></div>';
+    listEl.innerHTML = '<div class="empty-state"><h3>Aucune session AG</h3><p>L\'administrateur doit créer une session AG.</p></div>';
     return;
   }
 
-  const infoEl = document.getElementById('ag-session-info');
-  infoEl.style.display = 'block';
+  const barEl = document.getElementById('ag-session-bar');
+  barEl.style.display = 'block';
   document.getElementById('ag-session-titre').textContent = session.titre;
   if (session.nombre_membres_presents) {
     document.getElementById('ag-session-presents').textContent =
@@ -140,33 +165,32 @@ async function loadResolutionsAg() {
     .from('resolutions').select('*').eq('session_id', session.id).order('numero');
 
   if (!resolutions?.length) {
-    listEl.innerHTML = '<div class="empty-state"><h3>Aucune résolution</h3>'
-      + '<p>Aucune résolution n\'a encore été ajoutée.</p></div>';
+    listEl.innerHTML = '<div class="empty-state"><h3>Aucune résolution</h3><p>Aucune résolution n\'a encore été ajoutée.</p></div>';
     return;
   }
 
-  const voterId = getVoterId();
-  const resIds  = resolutions.map(r => r.id);
-  const { data: votes } = await sb
-    .from('votes').select('resolution_id, choix')
-    .in('resolution_id', resIds).eq('votant_email', voterId);
+  const resIds = resolutions.map(r => r.id);
+
+  const { data: votedIds } = await sb.rpc('check_voted_ag', {
+    p_resolution_ids: resIds,
+    p_membre_id:      selectedIdAg,
+  });
 
   mesVotesAg = {};
-  (votes || []).forEach(v => { mesVotesAg[v.resolution_id] = v.choix; });
+  (votedIds || []).forEach(id => { mesVotesAg[id] = true; });
   listEl.innerHTML = resolutions.map(renderCardAg).join('');
 }
 
 function renderCardAg(r) {
-  const dejaVote = mesVotesAg[r.id];
-  const isOpen   = r.statut === 'ouverte';
-  const labels   = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
-  const typeRes  = r.type_resolution || 'ordinaire';
+  const dejaVote  = !!mesVotesAg[r.id];
+  const isOpen    = r.statut === 'ouverte';
+  const typeRes   = r.type_resolution || 'ordinaire';
   const typeLabel = TYPE_LABELS[typeRes];
 
   let body = '';
   if (dejaVote) {
-    body = '<span class="voted-tag ' + dejaVote + '">' + labels[dejaVote] + '</span>'
-         + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>';
+    body = '<span class="voted-tag voted">✓ Vote enregistré</span>'
+         + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Votre vote est anonyme</p>';
   } else if (isOpen) {
     body = '<div class="vote-row">'
       + '<button class="vbtn pour"       onclick="selectVoteAg(\'' + r.id + '\',\'pour\',this)">✅ Pour</button>'
@@ -205,34 +229,50 @@ function cancelVoteAg(resId) {
 }
 
 async function confirmVoteAg(resId) {
-  const choix   = pendingVoteAg[resId];
-  const voterId = getVoterId();
+  const choix = pendingVoteAg[resId];
   if (!choix) return;
 
-  const { error } = await sb.from('votes').insert({
-    resolution_id: resId, votant_email: voterId, choix,
+  const { data: result, error } = await sb.rpc('cast_vote_ag', {
+    p_resolution_id: resId,
+    p_membre_id:     selectedIdAg,
+    p_choix:         choix,
   });
 
-  if (error) {
-    showToast(error.code === '23505' ? 'Vous avez déjà voté pour cette résolution' : 'Erreur : ' + error.message);
+  if (error || !result?.ok) {
+    const msg = result?.error === 'already_voted' ? 'Vous avez déjà voté pour cette résolution' : 'Erreur : ' + (result?.error || error?.message);
+    showToast(msg);
     return;
   }
 
-  mesVotesAg[resId] = choix;
+  mesVotesAg[resId] = true;
   delete pendingVoteAg[resId];
   showToast('Vote enregistré ✅');
 
-  const labels = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
-  const card   = document.getElementById('card-' + resId);
+  const card = document.getElementById('card-' + resId);
   card.classList.add('voted');
   card.querySelector('.vote-row')?.remove();
   card.querySelector('.confirm-row')?.remove();
   card.insertAdjacentHTML('beforeend',
-    '<span class="voted-tag ' + choix + '">' + labels[choix] + '</span>'
-    + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>');
+    '<span class="voted-tag voted">✓ Vote enregistré</span>'
+    + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Votre vote est anonyme</p>');
 }
 
 // ── Récapitulatif ─────────────────────────────────────────────────────────────
+
+function toggleChrono(btn) {
+  const wrap = document.getElementById('ag-chrono-wrap');
+  const chevron = document.getElementById('chrono-chevron');
+  const isOpen  = wrap.style.display !== 'none';
+
+  wrap.style.display = isOpen ? 'none' : 'block';
+  chevron.setAttribute('data-lucide', isOpen ? 'chevron-down' : 'chevron-up');
+  lucide.createIcons();
+
+  if (!isOpen && !chronoLoaded) {
+    chronoLoaded = true;
+    loadChronologieAg();
+  }
+}
 
 async function loadChronologieAg() {
   const { data: sessions } = await sb
@@ -265,7 +305,7 @@ async function loadChronologieAg() {
 
     const date    = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
     const present = session.nombre_membres_presents || 0;
-    const quorumHtml = present
+    const presentsHtml = present
       ? '<div style="padding:10px 20px;border-bottom:1px solid #1e3a5f22;font-size:0.78rem;color:#8fa8c8;">👥 ' + present + ' membre' + (present > 1 ? 's' : '') + ' présent' + (present > 1 ? 's' : '') + '</div>'
       : '';
 
@@ -274,18 +314,18 @@ async function loadChronologieAg() {
       + '<div><div class="chrono-date">📅 ' + date + '</div><div class="chrono-titre">' + session.titre + '</div></div>'
       + '<span style="color:#8fa8c8;font-size:0.8rem;">' + resolutions.length + ' décision' + (resolutions.length > 1 ? 's' : '') + '</span>'
       + '</div>'
-      + quorumHtml
+      + presentsHtml
       + '<div class="chrono-res">'
       + resolutions.map(r => {
           const online    = counts[r.id];
           const hasManuel = r.votes_pour_manuel !== null && r.votes_pour_manuel !== undefined;
           const c         = hasManuel
             ? { pour: r.votes_pour_manuel, contre: r.votes_contre_manuel, abstention: r.votes_abstention_manuel, total: r.votes_pour_manuel + r.votes_contre_manuel + r.votes_abstention_manuel }
-            : { ...online, total: online.total };
+            : { ...online };
           const typeRes   = r.type_resolution || 'ordinaire';
           const res       = computeResult(c, typeRes);
           const modeLabel = hasManuel ? ' <span style="background:#1a3260;border-radius:4px;padding:1px 6px;font-size:0.68rem;color:#8fa8c8;">présentiel</span>' : '';
-          return '<div class="chrono-item" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;">'
+          return '<div class="chrono-item">'
             + '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;gap:8px;">'
             + '<span class="chrono-item-titre">Rés. ' + r.numero + ' — ' + r.titre + modeLabel + '</span>'
             + res.pill + '</div>'

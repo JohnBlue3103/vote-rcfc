@@ -56,6 +56,60 @@ function switchAdminTab(tab) {
 
 // ── Chargement global ─────────────────────────────────────────────────────────
 
+// ── Membres AG ────────────────────────────────────────────────────────────────
+
+async function loadMembresAg() {
+  const { data, error } = await sb.rpc('admin_list_membres_ag');
+  const el = document.getElementById('ag-membres-list');
+  if (!el) return;
+  if (error || !data?.length) {
+    el.innerHTML = '<p style="color:#4a5568;font-size:0.82rem;">Aucun adhérent enregistré</p>';
+    return;
+  }
+  el.innerHTML = data.map(m =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f3c;border-radius:8px;padding:9px 12px;margin-bottom:6px;gap:8px;">'
+    + '<div>'
+    +   '<div style="color:#fff;font-size:0.85rem;font-weight:600;">' + m.nom + '</div>'
+    +   '<div style="color:#C8A84B;font-size:0.78rem;letter-spacing:2px;">' + m.code + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+    + (m.actif
+        ? '<button class="btn-sm-grey" onclick="toggleMembreAg(\'' + m.id + '\',false)">Désactiver</button>'
+        : '<button class="btn-sm-green" onclick="toggleMembreAg(\'' + m.id + '\',true)">Activer</button>')
+    + '<button class="btn-sm-grey" onclick="deleteMembreAg(\'' + m.id + '\')">🗑</button>'
+    + '</div>'
+    + '</div>'
+  ).join('');
+}
+
+async function addMembreAg() {
+  const nom  = document.getElementById('ag-m-nom').value.trim();
+  const code = document.getElementById('ag-m-code').value.trim().toUpperCase();
+  if (!nom || !code) return showToast('Nom et code requis');
+  const { data: result, error } = await sb.rpc('admin_add_membre_ag', { p_nom: nom, p_code: code });
+  if (error || !result?.ok) {
+    showToast(result?.error === 'code_exists' ? 'Ce code existe déjà' : 'Erreur : ' + (result?.error || error?.message));
+    return;
+  }
+  showToast('Adhérent ajouté ✅');
+  document.getElementById('ag-m-nom').value  = '';
+  document.getElementById('ag-m-code').value = '';
+  await loadMembresAg();
+}
+
+async function toggleMembreAg(id, actif) {
+  await sb.rpc('admin_toggle_membre_ag', { p_id: id, p_actif: actif });
+  showToast(actif ? 'Adhérent activé' : 'Adhérent désactivé');
+  await loadMembresAg();
+}
+
+async function deleteMembreAg(id) {
+  if (!confirm('Supprimer cet adhérent ?')) return;
+  await sb.rpc('admin_delete_membre_ag', { p_id: id });
+  showToast('Adhérent supprimé');
+  await loadMembresAg();
+}
+
 async function loadAllSessions() {
   const { data } = await sb.from('sessions').select('*').order('created_at', { ascending: false });
   const all = data || [];
@@ -66,6 +120,7 @@ async function loadAllSessions() {
   if (sessionsCa.length) loadAdminResCa();
   if (sessionsAg.length) loadAdminResAg();
   loadDocsAdmin();
+  loadMembresAg();
 }
 
 // ════════════════════════════════════════════════════════

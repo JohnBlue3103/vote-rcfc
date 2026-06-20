@@ -221,6 +221,16 @@
           </div>
 
           <div class="panel">
+            <h3>Adhérents AG</h3>
+            <label>Nom complet</label>
+            <input type="text" id="ag-m-nom" placeholder="Prénom Nom"/>
+            <label>Code personnel</label>
+            <input type="text" id="ag-m-code" placeholder="JDUP2026" maxlength="12" style="text-transform:uppercase;letter-spacing:2px;"/>
+            <button class="btn-gold" onclick="addMembreAg()">+ Ajouter l'adhérent</button>
+            <div id="ag-membres-list" style="margin-top:14px;"></div>
+          </div>
+
+          <div class="panel">
             <h3>Ajouter une résolution</h3>
             <label>Session AG</label>
             <select id="ag-r-session"></select>

@@ -155,12 +155,12 @@ async function loadResolutions() {
   }
 
   const resIds = resolutions.map(r => r.id);
-  const { data: votes } = await sb
-    .from('votes').select('resolution_id, choix')
-    .in('resolution_id', resIds).eq('votant_email', selectedName);
+  const { data: parts } = await sb
+    .from('participations_ca').select('resolution_id')
+    .in('resolution_id', resIds).eq('membre_nom', selectedName);
 
   mesVotes = {};
-  (votes || []).forEach(v => { mesVotes[v.resolution_id] = v.choix; });
+  (parts || []).forEach(p => { mesVotes[p.resolution_id] = true; });
   renderResolutions(resolutions);
 }
 
@@ -169,14 +169,13 @@ function renderResolutions(list) {
 }
 
 function renderCard(r) {
-  const dejaVote = mesVotes[r.id];
+  const dejaVote = !!mesVotes[r.id];
   const isOpen   = r.statut === 'ouverte';
-  const labels   = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
 
   let body = '';
   if (dejaVote) {
-    body = '<span class="voted-tag ' + dejaVote + '">' + labels[dejaVote] + '</span>'
-         + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>';
+    body = '<span class="voted-tag voted">✓ Vote enregistré</span>'
+         + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Votre vote est anonyme</p>';
   } else if (isOpen) {
     body = '<div class="vote-row">'
       + '<button class="vbtn pour"       onclick="selectVote(\'' + r.id + '\',\'pour\',this)">✅ Pour</button>'
@@ -191,7 +190,7 @@ function renderCard(r) {
     body = '<span class="closed-label">Vote fermé pour cette résolution</span>';
   }
 
-  return '<div class="res-card ' + (dejaVote ? 'voted' : '') + '" id="card-' + r.id + '">'
+  return '<div class="res-card ' + (dejaVote ? 'voted' : '') + '" id="card-' + r.id + '" data-voted="' + dejaVote + '">'
     + '<div class="res-num">Résolution n°' + r.numero + '</div>'
     + '<div class="res-titre">' + r.titre + '</div>'
     + (r.description ? '<div class="res-desc">' + r.description + '</div>' : '')
@@ -217,27 +216,29 @@ async function confirmVote(resId) {
   const choix = pendingVote[resId];
   if (!choix) return;
 
-  const { error } = await sb.from('votes').insert({
-    resolution_id: resId, votant_email: selectedName, choix,
+  const { data: result, error } = await sb.rpc('cast_vote_ca', {
+    p_resolution_id: resId,
+    p_membre_nom:    selectedName,
+    p_choix:         choix,
   });
 
-  if (error) {
-    showToast(error.code === '23505' ? 'Vous avez déjà voté' : 'Erreur : ' + error.message);
+  if (error || !result?.ok) {
+    const msg = result?.error === 'already_voted' ? 'Vous avez déjà voté' : 'Erreur : ' + (result?.error || error?.message);
+    showToast(msg);
     return;
   }
 
-  mesVotes[resId] = choix;
+  mesVotes[resId] = true;
   delete pendingVote[resId];
   showToast('Vote enregistré ✅');
 
-  const labels = { pour: '✅ Pour', contre: '❌ Contre', abstention: '⚪ Abstention' };
-  const card   = document.getElementById('card-' + resId);
+  const card = document.getElementById('card-' + resId);
   card.classList.add('voted');
   card.querySelector('.vote-row')?.remove();
   card.querySelector('.confirm-row')?.remove();
   card.insertAdjacentHTML('beforeend',
-    '<span class="voted-tag ' + choix + '">' + labels[choix] + '</span>'
-    + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Vote enregistré</p>');
+    '<span class="voted-tag voted">✓ Vote enregistré</span>'
+    + '<p style="font-size:0.78rem;color:#4a5568;margin-top:8px;">Votre vote est anonyme</p>');
 }
 
 // ── Documents ─────────────────────────────────────────────────────────────────
@@ -295,7 +296,8 @@ async function loadChronologie() {
     if (!resolutions?.length) continue;
 
     const resIds = resolutions.map(r => r.id);
-    const { data: votes } = await sb.from('votes').select('resolution_id, choix, votant_email').in('resolution_id', resIds);
+    const { data: votes } = await sb.from('votes').select('resolution_id, choix').in('resolution_id', resIds);
+    const { data: parts } = await sb.from('participations_ca').select('resolution_id, membre_nom').in('resolution_id', resIds);
 
     const counts = {};
     resIds.forEach(id => { counts[id] = { pour: 0, contre: 0, abstention: 0, total: 0 }; });
@@ -305,7 +307,7 @@ async function loadChronologie() {
 
     const date = new Date(session.created_at).toLocaleDateString('fr-FR', { dateStyle: 'long' });
 
-    const votants = [...new Set((votes || []).map(v => v.votant_email))].sort();
+    const votants = [...new Set((parts || []).map(p => p.membre_nom))].sort();
 
     html += '<div class="chrono-session">'
       + '<div class="chrono-header">'
@@ -333,9 +335,8 @@ async function loadChronologie() {
             else        pill = '<span class="result-pill result-rejete">Rejeté ' + c.pour + '/' + exprimes + ' (2/3)</span>';
           }
 
-          // Votants de cette résolution (sans révéler leur choix)
-          const votesDeLaRes = (votes || []).filter(v => v.resolution_id === r.id);
-          const votantsDeLaRes = votesDeLaRes.map(v => v.votant_email).sort();
+          // Votants de cette résolution (depuis participations_ca, sans leur choix)
+          const votantsDeLaRes = (parts || []).filter(p => p.resolution_id === r.id).map(p => p.membre_nom).sort();
 
           const votantsRow = votantsDeLaRes.length === 0 ? '' :
             '<div style="margin-top:8px;font-size:0.75rem;">'
